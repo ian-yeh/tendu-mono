@@ -1,5 +1,4 @@
 import base64
-import json
 import asyncio
 import time
 from datetime import datetime
@@ -9,34 +8,12 @@ from google import genai
 
 from app.models import Action, TestCase
 from app.store import store
-from app.services.gemini import GEMINI_API_KEY
+from app.services.llm import GEMINI_API_KEY, SYSTEM_PROMPT 
+from app.services.utils import parse_json_response
 
 # Screen dimensions
 SCREEN_WIDTH = 1440
 SCREEN_HEIGHT = 900
-
-SYSTEM_PROMPT = """You are a web automation agent that analyzes screenshots and decides what actions to take to complete a test.
-
-Available actions (action_name variable):
-- navigate: Navigate to a URL. Args: {"url": "string"}
-- click_at: Click at coordinates. Args: {"x": int (0-999), "y": int (0-999)}
-- type_text_at: Type text at coordinates. Args: {"x": int (0-999), "y": int (0-999), "text": "string", "press_enter": bool, "clear_before_typing": bool}
-- scroll_document: Scroll the page. Args: {"direction": "up"|"down"|"left"|"right"}
-- go_back: Go back in browser history. Args: {}
-- go_forward: Go forward in browser history. Args: {}
-- wait_5_seconds: Wait 5 seconds. Args: {}
-- key_combination: Press keyboard keys. Args: {"keys": "string"}
-- done: Mark test as complete. Args: {"success": bool, "message": "string"}
-
-Respond with JSON only:
-{
-  "observation": "What you see in the screenshot and current state",
-  "reasoning": "Why you're taking this action",
-  "action": "action_name",
-  "args": {action arguments}
-}
-
-Coordinates are normalized 0-999 for both x and y regardless of actual screen size."""
 
 async def run_agent(test_id: str, url: str, focus: str, sio) -> None:
     """Main agent that uses Gemini to analyze screenshots and control browser via Playwright."""
@@ -300,112 +277,3 @@ Analyze the screenshot and decide the next action. If the test is complete, use 
             print(f"Emitted error event via Socket.IO to room {test_id}")
         except Exception as emit_error:
             print(f"Failed to emit error event: {emit_error}")
-
-def parse_json_response(text: str) -> dict:
-    """Extract and parse JSON from model response."""
-    try:
-        # Try direct parse
-        return json.loads(text)
-    except:
-        pass
-    
-    # Try to extract from markdown code blocks
-    if "```json" in text:
-        try:
-            json_str = text.split("```json")[1].split("```")[0].strip()
-            return json.loads(json_str)
-        except:
-            pass
-    elif "```" in text:
-        try:
-            json_str = text.split("```")[1].split("```")[0].strip()
-            return json.loads(json_str)
-        except:
-            pass
-    
-    # Try to find JSON object in text
-    try:
-        start = text.index("{")
-        end = text.rindex("}") + 1
-        json_str = text[start:end]
-        return json.loads(json_str)
-    except:
-        pass
-    
-    return None
-
-def execute_single_action(action_name: str, args: dict, page, screen_width: int, screen_height: int) -> dict:
-    """Execute a single action returned by the model."""
-    action_result = {}
-    print(f"  -> Executing: {action_name} with args: {args}")
-    
-    try:
-        if action_name == "navigate":
-            url = args.get("url", "")
-            page.goto(url, wait_until="networkidle")
-            action_result = {"element": url}
-        elif action_name == "click_at":
-            actual_x = denormalize_x(args["x"], screen_width)
-            actual_y = denormalize_y(args["y"], screen_height)
-            page.mouse.click(actual_x, actual_y)
-            action_result = {"element": f"({actual_x}, {actual_y})"}
-        elif action_name == "type_text_at":
-            actual_x = denormalize_x(args["x"], screen_width)
-            actual_y = denormalize_y(args["y"], screen_height)
-            text = args["text"]
-            press_enter = args.get("press_enter", False)
-            clear_before_typing = args.get("clear_before_typing", True)
-            
-            page.mouse.click(actual_x, actual_y)
-            if clear_before_typing:
-                page.keyboard.press("Control+A")
-                page.keyboard.press("Backspace")
-            page.keyboard.type(text)
-            if press_enter:
-                page.keyboard.press("Enter")
-            action_result = {"element": text}
-        elif action_name == "scroll_document":
-            direction = args["direction"]
-            if direction == "down":
-                page.mouse.wheel(0, 500)
-            elif direction == "up":
-                page.mouse.wheel(0, -500)
-            elif direction == "left":
-                page.mouse.wheel(-500, 0)
-            elif direction == "right":
-                page.mouse.wheel(500, 0)
-            action_result = {"element": direction}
-        elif action_name == "go_back":
-            page.go_back()
-            action_result = {"element": "back"}
-        elif action_name == "go_forward":
-            page.go_forward()
-            action_result = {"element": "forward"}
-        elif action_name == "wait_5_seconds":
-            page.wait_for_timeout(5000)
-            action_result = {"element": "wait"}
-        elif action_name == "key_combination":
-            keys = args["keys"]
-            page.keyboard.press(keys)
-            action_result = {"element": keys}
-        else:
-            print(f"Warning: Unknown action {action_name}")
-            action_result = {"element": action_name}
-        
-        # Wait for page to settle
-        page.wait_for_load_state("networkidle", timeout=5000)
-        page.wait_for_timeout(1000)
-        
-    except Exception as e:
-        print(f"Error executing {action_name}: {e}")
-        action_result = {"error": str(e), "element": "error"}
-    
-    return action_result
-
-def denormalize_x(x: int, screen_width: int) -> int:
-    """Convert normalized x coordinate (0-1000) to actual pixel coordinate."""
-    return int(x / 1000 * screen_width)
-
-def denormalize_y(y: int, screen_height: int) -> int:
-    """Convert normalized y coordinate (0-1000) to actual pixel coordinate."""
-    return int(y / 1000 * screen_height)

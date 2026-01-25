@@ -51,6 +51,8 @@ export default function TestSessionClient({
 }: Props) {
   const [testRun, setTestRun] = useState<TestRun | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [totalPassed, setTotalPassed] = useState(0);
+  const [totalFailed, setTotalFailed] = useState(0);
 
   // Fetch test results on mount
   useEffect(() => {
@@ -106,6 +108,8 @@ export default function TestSessionClient({
     newSocket.on("complete", () => {
       setTestRun((prev: TestRun | null) => {
         if (!prev) return prev;
+        setTotalPassed(prev.cases.filter((c) => c.status === "pass").length);
+        setTotalFailed(prev.cases.filter((c) => c.status === "fail").length);
         return {
           ...prev,
           status: "complete",
@@ -116,6 +120,8 @@ export default function TestSessionClient({
     newSocket.on("error", () => {
       setTestRun((prev: TestRun | null) => {
         if (!prev) return prev;
+        setTotalPassed(prev.cases.filter((c) => c.status === "pass").length);
+        setTotalFailed(prev.cases.filter((c) => c.status === "fail").length);
         return {
           ...prev,
           status: "failed",
@@ -139,12 +145,7 @@ export default function TestSessionClient({
     }
   };
 
-  const totalPassed = testRun?.cases.filter((c) => c.status === "pass").length ?? 0;
-  const totalFailed = testRun?.cases.filter((c) => c.status === "fail").length ?? 0;
-
-  // Format action type for display
   const formatActionType = (type: string) => {
-    // Convert snake_case to readable format
     return type
       .replace(/_/g, " ")
       .split(" ")
