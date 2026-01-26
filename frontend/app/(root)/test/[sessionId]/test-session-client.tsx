@@ -4,19 +4,30 @@ import { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   History,
   Loader2,
+  MousePointer2,
+  Navigation,
+  Keyboard,
+  ScrollText,
+  ArrowLeftCircle,
+  ArrowRightCircle,
+  Clock,
+  Command,
+  Flag,
   Sparkles,
   XCircle,
+  Maximize2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 import { getTest, type TestRun, type TestCase, type Action } from "@/lib/api";
 import { io } from "socket.io-client";
 import Image from "next/image";
-import { useData } from "@/hooks/useData";
 
 interface Props {
   sessionId: string;
@@ -24,35 +35,130 @@ interface Props {
   initialPrompt: string;
 }
 
-function TypewriterText({ text }: { text: string }) {
-  const [displayedText, setDisplayedText] = useState("");
-  const [currentIndex, setCurrentIndex] = useState(0);
+// Action type to icon mapping
+const ACTION_ICONS: Record<string, React.ReactNode> = {
+  navigate: <Navigation className="h-3.5 w-3.5" />,
+  click_at: <MousePointer2 className="h-3.5 w-3.5" />,
+  type_text_at: <Keyboard className="h-3.5 w-3.5" />,
+  scroll_document: <ScrollText className="h-3.5 w-3.5" />,
+  go_back: <ArrowLeftCircle className="h-3.5 w-3.5" />,
+  go_forward: <ArrowRightCircle className="h-3.5 w-3.5" />,
+  wait_5_seconds: <Clock className="h-3.5 w-3.5" />,
+  key_combination: <Command className="h-3.5 w-3.5" />,
+  done: <Flag className="h-3.5 w-3.5" />,
+};
 
-  useEffect(() => {
-    if (currentIndex < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedText(prev => prev + text[currentIndex]);
-        setCurrentIndex(prev => prev + 1);
-      }, 5); // Adjust speed here (lower = faster)
+// Action type to color mapping
+const ACTION_COLORS: Record<string, string> = {
+  navigate: "text-blue-400 bg-blue-400/10 border-blue-400/30",
+  click_at: "text-purple-400 bg-purple-400/10 border-purple-400/30",
+  type_text_at: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
+  scroll_document: "text-amber-400 bg-amber-400/10 border-amber-400/30",
+  go_back: "text-gray-400 bg-gray-400/10 border-gray-400/30",
+  go_forward: "text-gray-400 bg-gray-400/10 border-gray-400/30",
+  wait_5_seconds: "text-orange-400 bg-orange-400/10 border-orange-400/30",
+  key_combination: "text-pink-400 bg-pink-400/10 border-pink-400/30",
+  done: "text-green-400 bg-green-400/10 border-green-400/30",
+};
 
-      return () => clearTimeout(timeout);
-    }
-  }, [currentIndex, text]);
+function ActionItem({ action, index, isSelected, onSelect }: {
+  action: Action;
+  index: number;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const icon = ACTION_ICONS[action.type] || <Sparkles className="h-3.5 w-3.5" />;
+  const colorClass = ACTION_COLORS[action.type] || "text-gray-400 bg-gray-400/10 border-gray-400/30";
 
-  return <span>{displayedText}</span>;
+  const formatActionType = (type: string) => {
+    return type
+      .replace(/_/g, " ")
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
+  return (
+    <div
+      className={`border rounded-lg transition-all cursor-pointer ${isSelected
+          ? "border-purple-500/50 bg-purple-500/5"
+          : "border-gray-800 hover:border-gray-700"
+        }`}
+      onClick={onSelect}
+    >
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        {/* Step number */}
+        <div className="text-[0.65rem] text-gray-600 w-4 text-center font-mono">
+          {index + 1}
+        </div>
+
+        {/* Icon with color */}
+        <div className={`p-1.5 rounded border ${colorClass}`}>
+          {icon}
+        </div>
+
+        {/* Action info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium ${colorClass.split(' ')[0]}`}>
+              {formatActionType(action.type)}
+            </span>
+            {action.element && (
+              <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                {action.element}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Time */}
+        <span className="text-[0.65rem] text-gray-600">
+          {new Date(action.timestamp).toLocaleTimeString()}
+        </span>
+
+        {/* Expand button for reasoning */}
+        {action.reasoning && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            className="p-1 hover:bg-gray-800 rounded transition-colors"
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Collapsible reasoning */}
+      {isExpanded && action.reasoning && (
+        <div className="px-3 pb-3 pt-1 border-t border-gray-800/50">
+          <p className="text-xs text-gray-400 leading-relaxed pl-8">
+            {action.reasoning}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function TestSessionClient({
   sessionId,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   initialUrl,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   initialPrompt,
 }: Props) {
   const [testRun, setTestRun] = useState<TestRun | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [totalPassed, setTotalPassed] = useState(0);
   const [totalFailed, setTotalFailed] = useState(0);
+  const [selectedActionIndex, setSelectedActionIndex] = useState<number | null>(null);
+  const [isScreenshotExpanded, setIsScreenshotExpanded] = useState(false);
+  const actionsEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch test results on mount
   useEffect(() => {
@@ -61,7 +167,9 @@ export default function TestSessionClient({
         setIsLoading(true);
         const data = await getTest(sessionId);
         setTestRun(data);
-
+        if (data.actions.length > 0) {
+          setSelectedActionIndex(data.actions.length - 1);
+        }
       } catch (error) {
         console.error("Failed to fetch test results:", error);
       } finally {
@@ -88,11 +196,17 @@ export default function TestSessionClient({
       console.log("Received action via Socket.IO:", action);
       setTestRun((prev: TestRun | null) => {
         if (!prev) return prev;
+        const newActions = [...prev.actions, action];
+        setSelectedActionIndex(newActions.length - 1);
         return {
           ...prev,
-          actions: [...prev.actions, action],
+          actions: newActions,
         };
       });
+      // Auto-scroll to bottom
+      setTimeout(() => {
+        actionsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     });
 
     newSocket.on("testcase", (testCase: TestCase) => {
@@ -134,25 +248,6 @@ export default function TestSessionClient({
     };
   }, [sessionId]);
 
-  const getStatusIcon = (status: "pass" | "fail" | "pending") => {
-    switch (status) {
-      case "pass":
-        return <CheckCircle2 className="h-4 w-4 text-green-400" />;
-      case "fail":
-        return <XCircle className="h-4 w-4 text-red-400" />;
-      case "pending":
-        return <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />;
-    }
-  };
-
-  const formatActionType = (type: string) => {
-    return type
-      .replace(/_/g, " ")
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
-
   // Poll for updates periodically (fallback if Socket.io fails)
   useEffect(() => {
     if (!testRun || testRun.status === "complete" || testRun.status === "failed") return;
@@ -164,37 +259,56 @@ export default function TestSessionClient({
       } catch (error) {
         console.error("Failed to poll test results:", error);
       }
-    }, 3000); // Poll every 3 seconds
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [sessionId, testRun]);
 
+  // Get selected screenshot
+  const selectedScreenshot = selectedActionIndex !== null && testRun?.actions[selectedActionIndex]?.screenshot
+    ? testRun.actions[selectedActionIndex].screenshot
+    : testRun?.actions[testRun.actions.length - 1]?.screenshot;
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-[#0a0a1a] via-[#0f0a1f] to-[#1a0a1f] text-white flex">
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0a1a] via-[#0f0a1f] to-[#1a0a1f] text-white flex">
 
       {/* SIDEBAR */}
-      <aside className="hidden md:flex md:w-72 border-r border-purple-900/30 bg-[#070711]/80 backdrop-blur-sm flex-col">
+      <aside className="hidden lg:flex lg:w-64 border-r border-purple-900/30 bg-[#070711]/80 backdrop-blur-sm flex-col">
         <div className="px-4 py-4 border-b border-purple-900/30 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-purple-400" />
-            <span className="text-sm font-semibold">Test Sessions</span>
+            <span className="text-sm font-semibold">TestPilot</span>
           </div>
           <History className="h-4 w-4 text-gray-500" />
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {testRun ? (
-            <div className="px-4 py-4 space-y-2">
-              <div className="text-xs text-gray-400 mb-2">Test Run Info</div>
-              <div className="px-4 py-3 bg-purple-900/25 rounded-lg">
-                <p className="text-xs font-medium mb-1">{testRun.focus || "No focus specified"}</p>
-                <p className="text-[0.6rem] text-gray-500">{testRun.url}</p>
-                <p className="text-[0.6rem] text-gray-500 mt-1">
-                  Status: <span className="capitalize">{testRun.status}</span>
-                </p>
-                <p className="text-[0.6rem] text-gray-500">
-                  {testRun.cases.length} test cases · {testRun.actions.length} actions
-                </p>
+            <div className="p-4 space-y-4">
+              <div className="text-xs text-gray-400 uppercase tracking-wider">Test Info</div>
+
+              {/* Focus/Goal */}
+              <div className="space-y-1">
+                <div className="text-[0.65rem] text-gray-500">Goal</div>
+                <p className="text-xs font-medium leading-relaxed">{testRun.focus || "No focus specified"}</p>
+              </div>
+
+              {/* URL */}
+              <div className="space-y-1">
+                <div className="text-[0.65rem] text-gray-500">URL</div>
+                <p className="text-[0.65rem] text-purple-400 break-all">{testRun.url}</p>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <div className="bg-[#151521] rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-purple-400">{testRun.actions.length}</div>
+                  <div className="text-[0.65rem] text-gray-500">Actions</div>
+                </div>
+                <div className="bg-[#151521] rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-cyan-400">{testRun.cases.length}</div>
+                  <div className="text-[0.65rem] text-gray-500">Tests</div>
+                </div>
               </div>
             </div>
           ) : (
@@ -206,138 +320,154 @@ export default function TestSessionClient({
       </aside>
 
       {/* MAIN PANEL */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
 
         {/* TOP BAR */}
-        <header className="border-b border-purple-900/30 px-6 py-4 flex items-center justify-between">
+        <header className="border-b border-purple-900/30 px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <Link href="/test">
-              <Button variant="ghost" size="icon" className="text-gray-300">
+              <Button variant="ghost" size="icon" className="text-gray-300 h-8 w-8">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-xl font-semibold">AI Test Session</h1>
-                <p className="text-xs text-gray-400">Session ID: {sessionId}</p>
-              </div>
-              {testRun && (
-                <div className="text-xs">
-                  {testRun.status === "running" && (
-                    <div className="flex items-center gap-1.5 text-blue-400">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Running...</span>
-                    </div>
-                  )}
-                  {testRun.status === "complete" && (
-                    <div className="flex items-center gap-1.5 text-green-400">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Completed</span>
-                    </div>
-                  )}
-                  {testRun.status === "failed" && (
-                    <div className="flex items-center gap-1.5 text-red-400">
-                      <XCircle className="h-4 w-4" />
-                      <span>Failed</span>
-                    </div>
-                  )}
-                </div>
-              )}
+            <div>
+              <h1 className="text-base font-semibold">AI Test Session</h1>
+              <p className="text-[0.65rem] text-gray-500 font-mono">{sessionId}</p>
             </div>
+            {testRun && (
+              <div className="ml-2">
+                {testRun.status === "running" && (
+                  <div className="flex items-center gap-1.5 text-blue-400 bg-blue-400/10 px-2 py-1 rounded-full text-xs">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Running</span>
+                  </div>
+                )}
+                {testRun.status === "complete" && (
+                  <div className="flex items-center gap-1.5 text-green-400 bg-green-400/10 px-2 py-1 rounded-full text-xs">
+                    <CheckCircle2 className="h-3 w-3" />
+                    <span>Complete</span>
+                  </div>
+                )}
+                {testRun.status === "failed" && (
+                  <div className="flex items-center gap-1.5 text-red-400 bg-red-400/10 px-2 py-1 rounded-full text-xs">
+                    <XCircle className="h-3 w-3" />
+                    <span>Failed</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {testRun && (
-            <div className="flex items-center gap-4 text-xs text-gray-400">
-              <div className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-green-400" />
-                <span>{totalPassed} passed</span>
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1.5 text-green-400">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>{totalPassed}</span>
               </div>
-              <div className="flex items-center gap-1">
-                <XCircle className="h-4 w-4 text-red-400" />
-                <span>{totalFailed} failed</span>
+              <div className="flex items-center gap-1.5 text-red-400">
+                <XCircle className="h-3.5 w-3.5" />
+                <span>{totalFailed}</span>
               </div>
             </div>
           )}
         </header>
 
-        {/* CHAT AREA */}
-        <main className="flex-1 overflow-y-auto px-6 py-6">
+        {/* MAIN CONTENT - 50/50 split */}
+        <main className="flex-1 flex overflow-hidden">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex-1 flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
             </div>
           ) : testRun ? (
-            <div className="flex gap-6">
-              {/* LEFT COLUMN - Messages and Actions */}
-              <div className="flex-1 space-y-6">
-                {/* USER MESSAGE */}
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-xs font-semibold">U</div>
-                  <div className="bg-[#151521] border border-gray-700 rounded-xl px-4 py-3 max-w-3xl">
-                    <p className="text-sm whitespace-pre-line">{testRun.focus || "Test this application"}</p>
-                    <p className="text-xs text-gray-500 mt-2">URL: {testRun.url}</p>
-                  </div>
+            <>
+              {/* LEFT - Actions List (50%) */}
+              <div className="w-1/2 flex flex-col border-r border-gray-800/50">
+                <div className="px-4 py-3 border-b border-gray-800/50 flex items-center justify-between">
+                  <span className="text-xs text-gray-400">
+                    Actions ({testRun.actions.length})
+                  </span>
+                  {testRun.status === "running" && (
+                    <div className="flex items-center gap-1.5 text-[0.65rem] text-blue-400">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                      Live
+                    </div>
+                  )}
                 </div>
 
-                {/* AI RESPONSE - Actions */}
-                {testRun.actions.length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-semibold">AI</div>
-                    <div className="flex-1 max-w-3xl space-y-2">
-                      <div className="text-xs text-gray-400 mb-2">Actions ({testRun.actions.length})</div>
-                      {testRun.actions.map((action, idx) => (
-                        <div key={idx} className="space-y-2">
-                          <div className="bg-[#0f0f1e] border border-gray-800 rounded-lg px-3 py-2 text-xs">
-                            <span className="text-purple-400 capitalize">{formatActionType(action.type)}</span>
-                            {action.element && <span className="text-gray-400 ml-2">{action.element}</span>}
-                            <span className="text-gray-600 ml-2 text-[0.65rem]">
-                              {new Date(action.timestamp).toLocaleTimeString()}
-                            </span>
-                          </div>
-                          {action.reasoning && (
-                            <div className="text-sm text-gray-300 mb-5">
-                              <TypewriterText text={action.reasoning} />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {testRun.actions.map((action, idx) => (
+                    <ActionItem
+                      key={idx}
+                      action={action}
+                      index={idx}
+                      isSelected={selectedActionIndex === idx}
+                      onSelect={() => setSelectedActionIndex(idx)}
+                    />
+                  ))}
+                  <div ref={actionsEndRef} />
+                </div>
               </div>
 
-              {/* RIGHT COLUMN - Screenshot */}
-              {testRun.actions.length > 0 && testRun.actions[testRun.actions.length - 1].screenshot && (
-                <div className="w-[500px] sticky top-6 self-start">
-                  <div className="text-xs text-gray-400 mb-2">Current View</div>
-                  <div className="border border-gray-700 rounded-lg overflow-hidden">
-                    <Image
-                      src={`data:image/png;base64,${testRun.actions[testRun.actions.length - 1].screenshot}`}
-                      alt="Current browser view"
-                      width={1440}
-                      height={900}
-                      className="w-full h-auto"
-                    />
-                  </div>
+              {/* RIGHT - Screenshot (50%) */}
+              <div className="w-1/2 flex flex-col bg-[#080812]">
+                <div className="px-4 py-3 border-b border-gray-800/50 flex items-center justify-between">
+                  <span className="text-xs text-gray-400">
+                    {selectedActionIndex !== null ? `Step ${selectedActionIndex + 1} View` : 'Current View'}
+                  </span>
+                  <button
+                    onClick={() => setIsScreenshotExpanded(true)}
+                    className="p-1.5 hover:bg-gray-800 rounded transition-colors text-gray-500 hover:text-gray-300"
+                  >
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-              )}
-            </div>
+
+                <div className="flex-1 p-4 overflow-auto flex items-center justify-center">
+                  {selectedScreenshot ? (
+                    <div className="relative w-full h-full flex items-center justify-center">
+                      <Image
+                        src={`data:image/png;base64,${selectedScreenshot}`}
+                        alt="Browser view"
+                        width={1440}
+                        height={900}
+                        className="max-w-full max-h-full object-contain rounded-lg border border-gray-800"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-gray-600 text-sm">No screenshot available</div>
+                  )}
+                </div>
+              </div>
+            </>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="flex-1 flex items-center justify-center text-gray-500">
               Test session not found
             </div>
           )}
         </main>
-
-        {/* INFO FOOTER */}
-        <footer className="border-t border-purple-900/30 p-4 bg-[#0d0d14]">
-          <div className="max-w-3xl mx-auto text-xs text-gray-500">
-            {testRun?.status === "running" && (
-              <span>Updates will appear in real-time</span>
-            )}
-          </div>
-        </footer>
       </div>
+
+      {/* Fullscreen Screenshot Modal */}
+      {isScreenshotExpanded && selectedScreenshot && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-8"
+          onClick={() => setIsScreenshotExpanded(false)}
+        >
+          <button
+            onClick={() => setIsScreenshotExpanded(false)}
+            className="absolute top-4 right-4 p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <Image
+            src={`data:image/png;base64,${selectedScreenshot}`}
+            alt="Browser view fullscreen"
+            width={1440}
+            height={900}
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+        </div>
+      )}
     </div>
   );
 }
