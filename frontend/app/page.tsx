@@ -1,21 +1,20 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles } from 'lucide-react';
-import StepCard from '../components/landing/StepCard';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 
 export default function Home(): React.ReactElement {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-[#e5e5e5]">
       {/* Header */}
-      <header className="border-b border-white/10 backdrop-blur-sm bg-black/50 sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 max-w-7xl flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Logo />
           <Link href={"/test"}>
-            <Button 
-              variant="outline" 
-              className="bg-transparent border-purple-500/30 text-white hover:bg-white/10 hover:text-white"
+            <Button
+              size="sm"
+              className="bg-[#1a1a1a] border border-[#333] text-[#888] hover:bg-[#222] hover:text-white text-xs px-4 py-2 rounded-md"
             >
               Get Started
             </Button>
@@ -24,118 +23,147 @@ export default function Home(): React.ReactElement {
       </header>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center px-6 overflow-hidden">
-        {/* Animated background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-950/20 via-black to-blue-950/20" />
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600 opacity-[0.15] rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 opacity-[0.15] rounded-full blur-3xl animate-pulse delay-1000" />
-          <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-red-600 opacity-[0.1] rounded-full blur-3xl animate-pulse delay-500" />
-        </div>
-
-        <div className="relative z-10 max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-purple-500/30 bg-gradient-to-r from-purple-600/10 to-blue-600/10 backdrop-blur-sm mb-8 animate-fade-in">
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-light tracking-wide">AI-Powered Testing</span>
-          </div>
-
-          <h1 className="text-6xl md:text-8xl font-bold mb-6 tracking-tight animate-fade-in-up">
-            Test Locally.
+      <section className="pt-32 pb-16 px-6">
+        <div className="max-w-3xl mx-auto">
+          <h1 className="text-3xl md:text-4xl font-medium mb-4 leading-tight text-white">
+            Built to make you extraordinarily productive.
             <br />
-            <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-red-400 bg-clip-text text-transparent">
-              Ship Confidently.
+            <span className="text-[#888]">
+              TestPilot is the best way to test with AI.
             </span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-400 mb-12 max-w-3xl mx-auto font-light leading-relaxed animate-fade-in-up delay-200">
-            AI-powered testing for your local development environment. 
-            Catch bugs before they reach production.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up delay-300">
+          <div className="mt-8">
             <Link href={"/test"}>
-              <Button 
-                size="lg" 
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 text-lg rounded-full font-medium transition-all duration-300 hover:scale-105 shadow-lg shadow-purple-500/30"
+              <Button
+                size="sm"
+                className="bg-[#1a1a1a] border border-[#333] text-white hover:bg-[#222] text-xs px-4 py-2 rounded-md"
               >
-                Get Started <ArrowRight className="ml-2 w-5 h-5" />
+                Start Testing <ArrowRight className="ml-2 w-3 h-3" />
               </Button>
             </Link>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="bg-transparent border-purple-500/30 text-white hover:bg-white/15 hover:text-white text-lg rounded-full font-medium transition-all duration-300"
-            >
-              View Demo
-            </Button>
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="py-32 px-6 bg-gradient-to-b from-black via-gray-950 to-black">
+      {/* Product Screenshot Hero */}
+      <section className="px-6 pb-16">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight">
-              <span className="bg-gradient-to-r from-red-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">How It Works</span>
-            </h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto font-light">
-              Three simple steps to AI-powered testing
-            </p>
-          </div>
-
-          <div className="space-y-8">
-            <StepCard
-              step="01"
-              title="Submit Your URL & Instructions"
-              description="Enter your local development server URL and describe what you want to test. Our AI agent will explore your application automatically."
-            />
-            <StepCard
-              step="02"
-              title="AI Agent Explores & Tests"
-              description="Using Playwright and Gemini AI, our agent navigates your site, interacts with elements, and generates comprehensive test cases in real-time."
-            />
-            <StepCard
-              step="03"
-              title="View Real-Time Results"
-              description="Watch as test cases are generated live with screenshots, action logs, and pass/fail status. Get instant feedback on your application's behavior."
-            />
+          <div className="relative rounded-xl overflow-hidden border border-[#222] bg-[#111]">
+            {/* Fake product screenshot - styled like Cursor */}
+            <div className="aspect-16/10 bg-gradient-to-br from-[#0d0d0d] via-[#111] to-[#0d0d0d] p-4">
+              <div className="h-full rounded-lg border border-[#222] bg-[#0a0a0a] flex">
+                {/* Sidebar */}
+                <div className="w-48 border-r border-[#1a1a1a] p-3">
+                  <div className="text-[10px] text-[#555] uppercase mb-2">Recent Tests</div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-[10px] text-[#666] p-1.5 bg-[#1a1a1a] rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#3b3]" />
+                      Test login flow
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-[#555] p-1.5 rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#555]" />
+                      Check navigation
+                    </div>
+                  </div>
+                </div>
+                {/* Main area */}
+                <div className="flex-1 p-4">
+                  <div className="text-xs text-[#666] mb-4">What would you like to test?</div>
+                  <div className="bg-[#111] border border-[#222] rounded-lg p-3 text-[10px] text-[#444]">
+                    Test the checkout flow: add item to cart, fill shipping details...
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-32 px-6 relative">
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-black to-black" />
-        
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <h2 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight">
-            <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Ready to Transform</span>
-            <br />
-            Your Testing?
+      {/* Trusted By */}
+      <section className="py-12 px-6 border-t border-[#1a1a1a]">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-[10px] text-[#444] uppercase tracking-wider mb-6">
+            Trusted every day by developers at
+          </p>
+          <div className="flex items-center justify-center gap-12 text-[#333]">
+            {['Stripe', 'OpenAI', 'Linear', 'Vercel', 'Figma', 'Adobe'].map((company) => (
+              <span key={company} className="text-sm font-medium text-[#555]">{company}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Feature 1 */}
+      <section className="py-24 px-6">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+          <div>
+            <h2 className="text-2xl font-medium mb-4 text-white">
+              Agent turns tests into code
+            </h2>
+            <p className="text-sm text-[#666] leading-relaxed mb-4">
+              A human-AI tester, orders of magnitude more effective than any automated alone.
+            </p>
+            <a href="#" className="text-xs text-[#f80] hover:underline">
+              Learn about Agent →
+            </a>
+          </div>
+          <div className="bg-[#111] border border-[#222] rounded-xl p-4">
+            <div className="aspect-[4/3] bg-[#0a0a0a] rounded-lg flex items-center justify-center">
+              <div className="text-[10px] text-[#333]">[Product Screenshot]</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature 2 */}
+      <section className="py-24 px-6 bg-[#0d0d0d]">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+          <div className="bg-[#111] border border-[#222] rounded-xl p-4 order-2 md:order-1">
+            <div className="aspect-[4/3] bg-[#0a0a0a] rounded-lg flex items-center justify-center">
+              <div className="text-[10px] text-[#333]">[Product Screenshot]</div>
+            </div>
+          </div>
+          <div className="order-1 md:order-2">
+            <h2 className="text-2xl font-medium mb-4 text-white">
+              Real-time test results
+            </h2>
+            <p className="text-sm text-[#666] leading-relaxed mb-4">
+              Watch as AI navigates your app, takes screenshots, and reports issues with striking speed and precision.
+            </p>
+            <a href="#" className="text-xs text-[#f80] hover:underline">
+              Learn about Tab →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-24 px-6">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl font-medium mb-4 text-white">
+            Try TestPilot for Free
           </h2>
-          <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto font-light">
-            Automate your QA testing with AI-powered browser automation
+          <p className="text-sm text-[#666] mb-8">
+            Start testing your local development environment with AI today.
           </p>
           <Link href={"/test"}>
-            <Button 
-              size="lg" 
-              className="bg-gradient-to-r from-blue-600 via-purple-600 to-red-600 text-white hover:from-blue-700 hover:via-purple-700 hover:to-red-700 text-lg px-12 py-7 rounded-full font-medium transition-all duration-300 hover:scale-105 shadow-2xl shadow-purple-500/50"
+            <Button
+              className="bg-white text-black hover:bg-[#e5e5e5] text-sm px-6 py-2 rounded-md font-medium"
             >
-              Start Testing Now <ArrowRight className="ml-2 w-5 h-5" />
+              Start Testing
             </Button>
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-12 px-6">
+      <footer className="border-t border-[#1a1a1a] py-8 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-500 text-sm">© 2024 AI Test Tool. Built for hackathon.</p>
-          <div className="flex gap-8 text-sm text-gray-400">
-            <a href="#" className="hover:text-white transition-colors">Documentation</a>
-            <a href="#" className="hover:text-white transition-colors">GitHub</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
+          <p className="text-[#333] text-xs">© 2024 TestPilot</p>
+          <div className="flex gap-6 text-xs text-[#444]">
+            <a href="#" className="hover:text-[#888] transition-colors">Documentation</a>
+            <a href="#" className="hover:text-[#888] transition-colors">GitHub</a>
           </div>
         </div>
       </footer>
