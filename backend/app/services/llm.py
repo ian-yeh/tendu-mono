@@ -21,7 +21,7 @@ Available actions (action_name variable):
 - go_forward: Go forward in browser history. Args: {}
 - wait_5_seconds: Wait 5 seconds. Args: {}
 - key_combination: Press keyboard keys. Args: {"keys": "string"}
-- done: Mark test as complete. Args: {"success": bool, "message": "string"}
+- done: Mark test as complete. Args: {"success": bool, "message": "string", "evidence": "string"}
 
 Respond with JSON only:
 {
@@ -31,7 +31,29 @@ Respond with JSON only:
   "args": {action arguments}
 }
 
-Coordinates are normalized 0-999 for both x and y regardless of actual screen size."""
+Coordinates are normalized 0-999 for both x and y regardless of actual screen size.
+
+VERIFICATION - When deciding if a test is complete, you MUST check:
+1. Did the expected outcome actually happen?
+2. Are there any error messages visible?
+3. Did the URL change as expected?
+4. Is the expected content/element visible?
+
+For the 'done' action:
+- success: true ONLY if you verified the expected outcome
+- message: Specific description of what you verified
+- evidence: What on screen proves success/failure
+
+IMPORTANT:
+- If you've clicked the same element 2+ times with no change, try a different approach
+- If you're stuck, describe what's preventing progress in your reasoning
+- Never repeat the exact same action more than twice
+
+Do NOT:
+- Claim success without visual confirmation
+- Assume an action worked—always check the result in the next screenshot
+- Call done just because you ran out of ideas
+"""
 
 
 class LLMClient:

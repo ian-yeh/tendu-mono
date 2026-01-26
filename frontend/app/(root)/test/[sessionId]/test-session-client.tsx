@@ -36,15 +36,15 @@ interface Props {
 
 // Action type to icon mapping
 const ACTION_ICONS: Record<string, React.ReactNode> = {
-  navigate: <Navigation className="h-3 w-3" />,
-  click_at: <MousePointer2 className="h-3 w-3" />,
-  type_text_at: <Keyboard className="h-3 w-3" />,
-  scroll_document: <ScrollText className="h-3 w-3" />,
-  go_back: <ArrowLeftCircle className="h-3 w-3" />,
-  go_forward: <ArrowRightCircle className="h-3 w-3" />,
-  wait_5_seconds: <Clock className="h-3 w-3" />,
-  key_combination: <Command className="h-3 w-3" />,
-  done: <Flag className="h-3 w-3" />,
+  navigate: <Navigation className="h-4 w-4" />,
+  click_at: <MousePointer2 className="h-4 w-4" />,
+  type_text_at: <Keyboard className="h-4 w-4" />,
+  scroll_document: <ScrollText className="h-4 w-4" />,
+  go_back: <ArrowLeftCircle className="h-4 w-4" />,
+  go_forward: <ArrowRightCircle className="h-4 w-4" />,
+  wait_5_seconds: <Clock className="h-4 w-4" />,
+  key_combination: <Command className="h-4 w-4" />,
+  done: <CheckCircle2 className="h-4 w-4" />,
 };
 
 function ActionItem({ action, index, isSelected, onSelect }: {
@@ -66,28 +66,83 @@ function ActionItem({ action, index, isSelected, onSelect }: {
 
   const isDone = action.type === "done";
 
+  // Special styling for Done action - detect if it's a failure
+  if (isDone) {
+    const elementText = (action.element || "").toLowerCase();
+    const reasoningText = (action.reasoning || "").toLowerCase();
+    const isFailure = elementText.includes("fail") ||
+      elementText.includes("error") ||
+      reasoningText.includes("failed") ||
+      reasoningText.includes("could not") ||
+      reasoningText.includes("unable to");
+
+    return (
+      <div
+        className={`mx-2 my-2 rounded-lg border transition-colors cursor-pointer ${isFailure
+            ? isSelected
+              ? "bg-[#3a1a1a] border-[#b33]"
+              : "bg-[#1a0d0d] border-[#3a2a2a] hover:border-[#b33]"
+            : isSelected
+              ? "bg-[#1a3a1a] border-[#3b3]"
+              : "bg-[#0d1a0d] border-[#2a3a2a] hover:border-[#3b3]"
+          }`}
+        onClick={onSelect}
+      >
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            {isFailure ? (
+              <XCircle className="h-5 w-5 text-[#f55]" />
+            ) : (
+              <CheckCircle2 className="h-5 w-5 text-[#4c4]" />
+            )}
+            <span className={`text-sm font-semibold ${isFailure ? "text-[#f55]" : "text-[#4c4]"}`}>
+              {isFailure ? "Test Failed" : "Test Passed"}
+            </span>
+            <span className="text-xs text-[#555] ml-auto font-mono">
+              {new Date(action.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+          {action.element && (
+            <div className="mb-3">
+              <div className="text-xs text-[#666] mb-1">Result</div>
+              <p className="text-sm text-[#ccc]">{action.element}</p>
+            </div>
+          )}
+          {action.reasoning && (
+            <div>
+              <div className="text-xs text-[#666] mb-1">Details</div>
+              <p className="text-sm text-[#999] leading-relaxed">
+                {action.reasoning}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`transition-colors cursor-pointer ${isSelected
-          ? "bg-[#1a1a1a]"
-          : "hover:bg-[#111]"
+        ? "bg-[#1a1a1a]"
+        : "hover:bg-[#111]"
         }`}
       onClick={onSelect}
     >
-      <div className="flex items-start gap-3 px-3 py-2">
+      <div className="flex items-start gap-3 px-3 py-2.5">
         {/* Icon */}
-        <div className={`mt-0.5 ${isDone ? "text-[#3b3]" : "text-[#666]"}`}>
+        <div className="mt-0.5 text-[#666]">
           {icon}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-medium ${isDone ? "text-[#3b3]" : "text-[#888]"}`}>
+            <span className="text-sm font-medium text-[#aaa]">
               {formatActionType(action.type)}
             </span>
             {action.element && (
-              <span className="text-[11px] text-[#555] truncate">
+              <span className="text-xs text-[#666] truncate">
                 {action.element}
               </span>
             )}
@@ -95,14 +150,14 @@ function ActionItem({ action, index, isSelected, onSelect }: {
 
           {/* Reasoning preview or expanded */}
           {action.reasoning && (
-            <div className="mt-1">
+            <div className="mt-1.5">
               {isExpanded ? (
-                <p className="text-[11px] text-[#666] leading-relaxed">
+                <p className="text-sm text-[#888] leading-relaxed">
                   {action.reasoning}
                 </p>
               ) : (
-                <p className="text-[11px] text-[#555] truncate">
-                  {action.reasoning.substring(0, 80)}...
+                <p className="text-xs text-[#666] line-clamp-2">
+                  {action.reasoning.substring(0, 100)}...
                 </p>
               )}
             </div>
