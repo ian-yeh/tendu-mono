@@ -51,7 +51,7 @@ export default function Home(): React.ReactElement {
         <div className="max-w-5xl mx-auto">
           <div className="relative rounded-xl overflow-hidden border border-[#222] bg-[#111]">
             {/* Fake product screenshot - styled like Cursor */}
-            <div className="aspect-[16/10] bg-gradient-to-br from-[#0d0d0d] via-[#111] to-[#0d0d0d] p-4">
+            <div className="aspect-16/10 bg-gradient-to-br from-[#0d0d0d] via-[#111] to-[#0d0d0d] p-4">
               <div className="h-full rounded-lg border border-[#222] bg-[#0a0a0a] flex">
                 {/* Sidebar */}
                 <div className="w-48 border-r border-[#1a1a1a] p-3">
