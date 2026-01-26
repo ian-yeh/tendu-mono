@@ -11,7 +11,7 @@ export interface CreateTestResponse {
 }
 
 export interface Action {
-  type: "navigate" | "click" | "input" | "screenshot";
+  type: "navigate" | "click_at" | "type_text_at" | "scroll_document" | "go_back" | "go_forward" | "wait_5_seconds" | "key_combination" | "done" | "click" | "input" | "screenshot";
   element?: string;
   value?: string;
   reasoning?: string;

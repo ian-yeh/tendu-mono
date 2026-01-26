@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
-  History,
   Loader2,
   MousePointer2,
   Navigation,
@@ -17,13 +16,13 @@ import {
   Clock,
   Command,
   Flag,
-  Sparkles,
+  Circle,
   XCircle,
   Maximize2,
   X,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 import { getTest, type TestRun, type TestCase, type Action } from "@/lib/api";
 import { io } from "socket.io-client";
@@ -37,28 +36,15 @@ interface Props {
 
 // Action type to icon mapping
 const ACTION_ICONS: Record<string, React.ReactNode> = {
-  navigate: <Navigation className="h-3.5 w-3.5" />,
-  click_at: <MousePointer2 className="h-3.5 w-3.5" />,
-  type_text_at: <Keyboard className="h-3.5 w-3.5" />,
-  scroll_document: <ScrollText className="h-3.5 w-3.5" />,
-  go_back: <ArrowLeftCircle className="h-3.5 w-3.5" />,
-  go_forward: <ArrowRightCircle className="h-3.5 w-3.5" />,
-  wait_5_seconds: <Clock className="h-3.5 w-3.5" />,
-  key_combination: <Command className="h-3.5 w-3.5" />,
-  done: <Flag className="h-3.5 w-3.5" />,
-};
-
-// Action type to color mapping
-const ACTION_COLORS: Record<string, string> = {
-  navigate: "text-blue-400 bg-blue-400/10 border-blue-400/30",
-  click_at: "text-purple-400 bg-purple-400/10 border-purple-400/30",
-  type_text_at: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
-  scroll_document: "text-amber-400 bg-amber-400/10 border-amber-400/30",
-  go_back: "text-gray-400 bg-gray-400/10 border-gray-400/30",
-  go_forward: "text-gray-400 bg-gray-400/10 border-gray-400/30",
-  wait_5_seconds: "text-orange-400 bg-orange-400/10 border-orange-400/30",
-  key_combination: "text-pink-400 bg-pink-400/10 border-pink-400/30",
-  done: "text-green-400 bg-green-400/10 border-green-400/30",
+  navigate: <Navigation className="h-3 w-3" />,
+  click_at: <MousePointer2 className="h-3 w-3" />,
+  type_text_at: <Keyboard className="h-3 w-3" />,
+  scroll_document: <ScrollText className="h-3 w-3" />,
+  go_back: <ArrowLeftCircle className="h-3 w-3" />,
+  go_forward: <ArrowRightCircle className="h-3 w-3" />,
+  wait_5_seconds: <Clock className="h-3 w-3" />,
+  key_combination: <Command className="h-3 w-3" />,
+  done: <Flag className="h-3 w-3" />,
 };
 
 function ActionItem({ action, index, isSelected, onSelect }: {
@@ -68,8 +54,7 @@ function ActionItem({ action, index, isSelected, onSelect }: {
   onSelect: () => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const icon = ACTION_ICONS[action.type] || <Sparkles className="h-3.5 w-3.5" />;
-  const colorClass = ACTION_COLORS[action.type] || "text-gray-400 bg-gray-400/10 border-gray-400/30";
+  const icon = ACTION_ICONS[action.type] || <Circle className="h-3 w-3" />;
 
   const formatActionType = (type: string) => {
     return type
@@ -79,70 +64,73 @@ function ActionItem({ action, index, isSelected, onSelect }: {
       .join(" ");
   };
 
+  const isDone = action.type === "done";
+
   return (
     <div
-      className={`border rounded-lg transition-all cursor-pointer ${isSelected
-          ? "border-purple-500/50 bg-purple-500/5"
-          : "border-gray-800 hover:border-gray-700"
+      className={`transition-colors cursor-pointer ${isSelected
+          ? "bg-[#1a1a1a]"
+          : "hover:bg-[#111]"
         }`}
       onClick={onSelect}
     >
-      <div className="flex items-center gap-3 px-3 py-2.5">
-        {/* Step number */}
-        <div className="text-[0.65rem] text-gray-600 w-4 text-center font-mono">
-          {index + 1}
-        </div>
-
-        {/* Icon with color */}
-        <div className={`p-1.5 rounded border ${colorClass}`}>
+      <div className="flex items-start gap-3 px-3 py-2">
+        {/* Icon */}
+        <div className={`mt-0.5 ${isDone ? "text-[#3b3]" : "text-[#666]"}`}>
           {icon}
         </div>
 
-        {/* Action info */}
+        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium ${colorClass.split(' ')[0]}`}>
+            <span className={`text-xs font-medium ${isDone ? "text-[#3b3]" : "text-[#888]"}`}>
               {formatActionType(action.type)}
             </span>
             {action.element && (
-              <span className="text-xs text-gray-500 truncate max-w-[200px]">
+              <span className="text-[11px] text-[#555] truncate">
                 {action.element}
               </span>
             )}
           </div>
+
+          {/* Reasoning preview or expanded */}
+          {action.reasoning && (
+            <div className="mt-1">
+              {isExpanded ? (
+                <p className="text-[11px] text-[#666] leading-relaxed">
+                  {action.reasoning}
+                </p>
+              ) : (
+                <p className="text-[11px] text-[#555] truncate">
+                  {action.reasoning.substring(0, 80)}...
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Time */}
-        <span className="text-[0.65rem] text-gray-600">
-          {new Date(action.timestamp).toLocaleTimeString()}
-        </span>
-
-        {/* Expand button for reasoning */}
-        {action.reasoning && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-            className="p-1 hover:bg-gray-800 rounded transition-colors"
-          >
-            {isExpanded ? (
-              <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
-            )}
-          </button>
-        )}
+        {/* Expand/Time */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-[#444] font-mono">
+            {new Date(action.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          {action.reasoning && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+              className="p-0.5 hover:bg-[#222] rounded transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-3 w-3 text-[#555]" />
+              ) : (
+                <ChevronRight className="h-3 w-3 text-[#555]" />
+              )}
+            </button>
+          )}
+        </div>
       </div>
-
-      {/* Collapsible reasoning */}
-      {isExpanded && action.reasoning && (
-        <div className="px-3 pb-3 pt-1 border-t border-gray-800/50">
-          <p className="text-xs text-gray-400 leading-relaxed pl-8">
-            {action.reasoning}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
@@ -203,7 +191,6 @@ export default function TestSessionClient({
           actions: newActions,
         };
       });
-      // Auto-scroll to bottom
       setTimeout(() => {
         actionsEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
@@ -248,7 +235,7 @@ export default function TestSessionClient({
     };
   }, [sessionId]);
 
-  // Poll for updates periodically (fallback if Socket.io fails)
+  // Poll for updates periodically
   useEffect(() => {
     if (!testRun || testRun.status === "complete" || testRun.status === "failed") return;
 
@@ -264,200 +251,147 @@ export default function TestSessionClient({
     return () => clearInterval(interval);
   }, [sessionId, testRun]);
 
-  // Get selected screenshot
   const selectedScreenshot = selectedActionIndex !== null && testRun?.actions[selectedActionIndex]?.screenshot
     ? testRun.actions[selectedActionIndex].screenshot
     : testRun?.actions[testRun.actions.length - 1]?.screenshot;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a1a] via-[#0f0a1f] to-[#1a0a1f] text-white flex">
+    <div className="min-h-screen bg-[#0a0a0a] text-[#e5e5e5] flex">
 
-      {/* SIDEBAR */}
-      <aside className="hidden lg:flex lg:w-64 border-r border-purple-900/30 bg-[#070711]/80 backdrop-blur-sm flex-col">
-        <div className="px-4 py-4 border-b border-purple-900/30 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-purple-400" />
-            <span className="text-sm font-semibold">TestPilot</span>
+      {/* Left Sidebar - Session List Style */}
+      <aside className="w-64 bg-[#0d0d0d] border-r border-[#1a1a1a] flex flex-col">
+        <div className="p-3 border-b border-[#1a1a1a]">
+          <Link href="/test" className="flex items-center gap-2 text-[#666] hover:text-[#888] transition-colors">
+            <ArrowLeft className="h-3 w-3" />
+            <span className="text-xs">Back to Tests</span>
+          </Link>
+        </div>
+
+        {/* Status */}
+        <div className="p-3 border-b border-[#1a1a1a]">
+          <div className="text-[10px] text-[#555] uppercase tracking-wider mb-2">Status</div>
+          {testRun && (
+            <div className="flex items-center gap-2">
+              {testRun.status === "running" && (
+                <>
+                  <div className="w-2 h-2 rounded-full bg-[#3b3] animate-pulse" />
+                  <span className="text-xs text-[#3b3]">Running</span>
+                </>
+              )}
+              {testRun.status === "complete" && (
+                <>
+                  <CheckCircle2 className="h-3 w-3 text-[#3b3]" />
+                  <span className="text-xs text-[#3b3]">Complete</span>
+                </>
+              )}
+              {testRun.status === "failed" && (
+                <>
+                  <XCircle className="h-3 w-3 text-[#f55]" />
+                  <span className="text-xs text-[#f55]">Failed</span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Test Info */}
+        {testRun && (
+          <div className="p-3 flex-1 overflow-y-auto">
+            <div className="text-[10px] text-[#555] uppercase tracking-wider mb-2">Test Info</div>
+            <div className="space-y-3">
+              <div>
+                <div className="text-[10px] text-[#444] mb-1">Goal</div>
+                <p className="text-[11px] text-[#888] leading-relaxed">{testRun.focus}</p>
+              </div>
+              <div>
+                <div className="text-[10px] text-[#444] mb-1">URL</div>
+                <p className="text-[10px] text-[#3b3] break-all font-mono">{testRun.url}</p>
+              </div>
+              <div className="flex gap-4 pt-2">
+                <div>
+                  <div className="text-lg font-medium text-[#3b3]">{testRun.actions.length}</div>
+                  <div className="text-[10px] text-[#555]">Actions</div>
+                </div>
+                <div>
+                  <div className="text-lg font-medium text-[#888]">{testRun.cases.length}</div>
+                  <div className="text-[10px] text-[#555]">Tests</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <History className="h-4 w-4 text-gray-500" />
+        )}
+      </aside>
+
+      {/* Middle - Actions List */}
+      <div className="w-96 border-r border-[#1a1a1a] flex flex-col">
+        <div className="p-3 border-b border-[#1a1a1a] flex items-center justify-between">
+          <span className="text-xs text-[#666]">Actions</span>
+          {testRun?.status === "running" && (
+            <div className="flex items-center gap-1.5">
+              <Loader2 className="h-3 w-3 animate-spin text-[#3b3]" />
+              <span className="text-[10px] text-[#3b3]">Live</span>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {testRun ? (
-            <div className="p-4 space-y-4">
-              <div className="text-xs text-gray-400 uppercase tracking-wider">Test Info</div>
-
-              {/* Focus/Goal */}
-              <div className="space-y-1">
-                <div className="text-[0.65rem] text-gray-500">Goal</div>
-                <p className="text-xs font-medium leading-relaxed">{testRun.focus || "No focus specified"}</p>
-              </div>
-
-              {/* URL */}
-              <div className="space-y-1">
-                <div className="text-[0.65rem] text-gray-500">URL</div>
-                <p className="text-[0.65rem] text-purple-400 break-all">{testRun.url}</p>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <div className="bg-[#151521] rounded-lg p-3 text-center">
-                  <div className="text-lg font-bold text-purple-400">{testRun.actions.length}</div>
-                  <div className="text-[0.65rem] text-gray-500">Actions</div>
-                </div>
-                <div className="bg-[#151521] rounded-lg p-3 text-center">
-                  <div className="text-lg font-bold text-cyan-400">{testRun.cases.length}</div>
-                  <div className="text-[0.65rem] text-gray-500">Tests</div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="px-4 py-6 text-xs text-gray-500">
-              Loading test session...
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* MAIN PANEL */}
-      <div className="flex-1 flex flex-col min-w-0">
-
-        {/* TOP BAR */}
-        <header className="border-b border-purple-900/30 px-4 py-3 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <Link href="/test">
-              <Button variant="ghost" size="icon" className="text-gray-300 h-8 w-8">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-base font-semibold">AI Test Session</h1>
-              <p className="text-[0.65rem] text-gray-500 font-mono">{sessionId}</p>
-            </div>
-            {testRun && (
-              <div className="ml-2">
-                {testRun.status === "running" && (
-                  <div className="flex items-center gap-1.5 text-blue-400 bg-blue-400/10 px-2 py-1 rounded-full text-xs">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Running</span>
-                  </div>
-                )}
-                {testRun.status === "complete" && (
-                  <div className="flex items-center gap-1.5 text-green-400 bg-green-400/10 px-2 py-1 rounded-full text-xs">
-                    <CheckCircle2 className="h-3 w-3" />
-                    <span>Complete</span>
-                  </div>
-                )}
-                {testRun.status === "failed" && (
-                  <div className="flex items-center gap-1.5 text-red-400 bg-red-400/10 px-2 py-1 rounded-full text-xs">
-                    <XCircle className="h-3 w-3" />
-                    <span>Failed</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {testRun && (
-            <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1.5 text-green-400">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>{totalPassed}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-red-400">
-                <XCircle className="h-3.5 w-3.5" />
-                <span>{totalFailed}</span>
-              </div>
-            </div>
-          )}
-        </header>
-
-        {/* MAIN CONTENT - 50/50 split */}
-        <main className="flex-1 flex overflow-hidden">
           {isLoading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-5 w-5 animate-spin text-[#3b3]" />
             </div>
-          ) : testRun ? (
-            <>
-              {/* LEFT - Actions List (50%) */}
-              <div className="w-1/2 flex flex-col border-r border-gray-800/50">
-                <div className="px-4 py-3 border-b border-gray-800/50 flex items-center justify-between">
-                  <span className="text-xs text-gray-400">
-                    Actions ({testRun.actions.length})
-                  </span>
-                  {testRun.status === "running" && (
-                    <div className="flex items-center gap-1.5 text-[0.65rem] text-blue-400">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                      Live
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                  {testRun.actions.map((action, idx) => (
-                    <ActionItem
-                      key={idx}
-                      action={action}
-                      index={idx}
-                      isSelected={selectedActionIndex === idx}
-                      onSelect={() => setSelectedActionIndex(idx)}
-                    />
-                  ))}
-                  <div ref={actionsEndRef} />
-                </div>
-              </div>
-
-              {/* RIGHT - Screenshot (50%) */}
-              <div className="w-1/2 flex flex-col bg-[#080812]">
-                <div className="px-4 py-3 border-b border-gray-800/50 flex items-center justify-between">
-                  <span className="text-xs text-gray-400">
-                    {selectedActionIndex !== null ? `Step ${selectedActionIndex + 1} View` : 'Current View'}
-                  </span>
-                  <button
-                    onClick={() => setIsScreenshotExpanded(true)}
-                    className="p-1.5 hover:bg-gray-800 rounded transition-colors text-gray-500 hover:text-gray-300"
-                  >
-                    <Maximize2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex-1 p-4 overflow-auto flex items-center justify-center">
-                  {selectedScreenshot ? (
-                    <div className="relative w-full h-full flex items-center justify-center">
-                      <Image
-                        src={`data:image/png;base64,${selectedScreenshot}`}
-                        alt="Browser view"
-                        width={1440}
-                        height={900}
-                        className="max-w-full max-h-full object-contain rounded-lg border border-gray-800"
-                      />
-                    </div>
-                  ) : (
-                    <div className="text-gray-600 text-sm">No screenshot available</div>
-                  )}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              Test session not found
-            </div>
-          )}
-        </main>
+          ) : testRun?.actions.map((action, idx) => (
+            <ActionItem
+              key={idx}
+              action={action}
+              index={idx}
+              isSelected={selectedActionIndex === idx}
+              onSelect={() => setSelectedActionIndex(idx)}
+            />
+          ))}
+          <div ref={actionsEndRef} />
+        </div>
       </div>
 
-      {/* Fullscreen Screenshot Modal */}
+      {/* Right - Screenshot */}
+      <div className="flex-1 flex flex-col bg-[#080808]">
+        <div className="p-3 border-b border-[#1a1a1a] flex items-center justify-between">
+          <span className="text-xs text-[#666]">
+            {selectedActionIndex !== null ? `Step ${selectedActionIndex + 1}` : 'Preview'}
+          </span>
+          <button
+            onClick={() => setIsScreenshotExpanded(true)}
+            className="p-1 hover:bg-[#1a1a1a] rounded transition-colors text-[#555] hover:text-[#888]"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        <div className="flex-1 p-4 overflow-auto flex items-center justify-center">
+          {selectedScreenshot ? (
+            <Image
+              src={`data:image/png;base64,${selectedScreenshot}`}
+              alt="Browser view"
+              width={1440}
+              height={900}
+              className="max-w-full max-h-full object-contain rounded border border-[#222]"
+            />
+          ) : (
+            <div className="text-[#444] text-sm">No screenshot</div>
+          )}
+        </div>
+      </div>
+
+      {/* Fullscreen Modal */}
       {isScreenshotExpanded && selectedScreenshot && (
         <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-8"
+          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-8"
           onClick={() => setIsScreenshotExpanded(false)}
         >
           <button
             onClick={() => setIsScreenshotExpanded(false)}
-            className="absolute top-4 right-4 p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+            className="absolute top-4 right-4 p-2 bg-[#1a1a1a] rounded-lg hover:bg-[#222] transition-colors"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 text-[#888]" />
           </button>
           <Image
             src={`data:image/png;base64,${selectedScreenshot}`}
