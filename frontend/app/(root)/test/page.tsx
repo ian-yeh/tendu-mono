@@ -22,9 +22,10 @@ export default function DashboardPage() {
   const [serverUrl, setServerUrl] = useState("");
   const [testPrompt, setTestPrompt] = useState("");
   const [isRunning, setIsRunning] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    console.log(sessions);
+    setHasMounted(true);
   }, []);
 
   const handleRunTests = async () => {
@@ -83,7 +84,7 @@ export default function DashboardPage() {
               Recent Tests
             </div>
 
-            {sessions.length > 0 ? (
+            {hasMounted && sessions.length > 0 ? (
               <div className="space-y-0.5">
                 {sessions.map((session) => (
                   <Link

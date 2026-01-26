@@ -79,12 +79,12 @@ function ActionItem({ action, index, isSelected, onSelect }: {
     return (
       <div
         className={`mx-2 my-2 rounded-lg border transition-colors cursor-pointer ${isFailure
-            ? isSelected
-              ? "bg-[#3a1a1a] border-[#b33]"
-              : "bg-[#1a0d0d] border-[#3a2a2a] hover:border-[#b33]"
-            : isSelected
-              ? "bg-[#1a3a1a] border-[#3b3]"
-              : "bg-[#0d1a0d] border-[#2a3a2a] hover:border-[#3b3]"
+          ? isSelected
+            ? "bg-[#3a1a1a] border-[#b33]"
+            : "bg-[#1a0d0d] border-[#3a2a2a] hover:border-[#b33]"
+          : isSelected
+            ? "bg-[#1a3a1a] border-[#3b3]"
+            : "bg-[#0d1a0d] border-[#2a3a2a] hover:border-[#3b3]"
           }`}
         onClick={onSelect}
       >
@@ -311,7 +311,7 @@ export default function TestSessionClient({
     : testRun?.actions[testRun.actions.length - 1]?.screenshot;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#e5e5e5] flex">
+    <div className="h-screen bg-[#0a0a0a] text-[#e5e5e5] flex overflow-hidden">
 
       {/* Left Sidebar - Session List Style */}
       <aside className="w-64 bg-[#0d0d0d] border-r border-[#1a1a1a] flex flex-col">
@@ -389,7 +389,7 @@ export default function TestSessionClient({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-5 w-5 animate-spin text-[#3b3]" />
