@@ -1,12 +1,34 @@
 #!/usr/bin/env node
 
-const args = process.argv.slice(2);
+import { Command } from 'commander';
+import * as p from '@clack/prompts';
+import color from 'picocolors';
 
-if (args.includes('--help') || args.includes('-h')) {
-  console.log('hello world');
-  process.exit(0);
-}
+const program = new Command();
 
-// Default behavior when no --help flag is provided
-console.log('TestPilot CLI');
-console.log('Use --help for help');
+program
+  .name('tendu')
+  .description('Tendu CLI')
+  .version('1.0.0');
+
+program
+  .command('hello')
+  .description('Say hello to a name')
+  .argument('<name>', 'The name to greet')
+  .action((name) => {
+    //p.intro(`${color.bgCyan(color.black(' testpilot-cli '))}`);
+    p.log.step(`Hello, ${color.cyan(name)}!`);
+    p.outro(color.green('Greeted successfully.'));
+  });
+
+program
+  .command('bye')
+  .description('Say goodbye to a name')
+  .argument('<name>', 'The name to say goodbye to')
+  .action((name) => {
+    //p.intro(`${color.bgCyan(color.black(' testpilot-cli '))}`);
+    p.log.step(`Goodbye, ${color.cyan(name)}!`);
+    p.outro(color.green('Said goodbye successfully.'));
+  });
+
+program.parse();
