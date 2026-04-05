@@ -50,18 +50,27 @@ chore: bump typescript to v5.4
 
 ```
 .
-├── src/                    # Source code
-│   ├── components/         # UI components
-│   ├── hooks/              # Custom React hooks
-│   ├── lib/                # Utility functions, helpers
-│   ├── services/           # API calls, external services
-│   ├── styles/             # Global styles, CSS
-│   └── types/              # TypeScript type definitions
-├── public/                 # Static assets
-├── tests/                  # Test files
-├── docs/                   # Documentation
-├── scripts/                # Build/deployment scripts
-└── agents.md               # This file
+├── .vscode/                # VS Code configuration
+├── apps/
+│   ├── api/                # Python FastAPI backend
+│   │   ├── app/
+│   │   │   ├── routes/     # API route handlers
+│   │   │   └── services/   # Business logic services
+│   │   └── ...
+│   └── web/                # Next.js frontend
+│       ├── app/            # Next.js App Router
+│       │   └── (root)/       # Route group
+│       │       └── test/
+│       │           └── [sessionId]/
+│       ├── components/
+│       │   ├── landing/    # Landing page components
+│       │   └── ui/         # Shared UI components
+│       ├── hooks/          # Custom React hooks
+│       ├── lib/            # Utility functions
+│       └── public/         # Static assets
+├── .gitignore
+├── AGENTS.md               # This file
+└── README.md
 ```
 
 ### Guidelines
