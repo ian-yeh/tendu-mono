@@ -138,14 +138,16 @@ export function dataAttrSelector(name: string, value?: string): string {
 /**
  * Extract text content using multiple fallback selectors
  */
-export async function extractTextWithFallback<T extends { textContent: () => Promise<string | null> }>(
+export async function extractTextWithFallback<T extends { textContent: () => Promise<string | null>, first?: () => T }>(
   locator: { locator: (s: string) => T },
   selectors: string[]
 ): Promise<string | null> {
   for (const selector of selectors) {
     try {
-      const element = locator.locator(selector).first();
-      const text = await element.textContent();
+      const element = locator.locator(selector);
+      // Use first() if available (Playwright Locator), otherwise just use the element itself
+      const firstElement = element.first ? element.first() : element;
+      const text = await firstElement.textContent();
       if (text?.trim()) return text.trim();
     } catch {
       continue;
