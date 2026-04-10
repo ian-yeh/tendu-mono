@@ -54,7 +54,7 @@ export class StaticStrategy extends BaseStrategy<Record<string, unknown>> {
             const values = await Promise.all(
               elements.map(el => this.extractValue(el, rule.attribute))
             );
-            results[key] = this.applyTransform(values, rule.transform);
+            results[key] = this.applyTransform(values.filter((v): v is string => v !== null), rule.transform);
           } else {
             const element = locator.first();
             const value = await this.extractValue(element, rule.attribute);
@@ -107,7 +107,7 @@ export class StaticStrategy extends BaseStrategy<Record<string, unknown>> {
         links: Array.from(document.querySelectorAll('a[href]')).map(a => ({
           text: a.textContent?.trim() ?? '',
           href: a.getAttribute('href'),
-          isExternal: a.hostname !== window.location.hostname,
+          isExternal: (a as HTMLAnchorElement).hostname !== window.location.hostname,
         })),
         images: Array.from(document.querySelectorAll('img')).map(img => ({
           src: img.getAttribute('src'),

@@ -39,7 +39,7 @@ type PageAction =
  * Handles SPAs, infinite scroll, pagination, and async data loading.
  */
 export class DynamicStrategy extends BaseStrategy<Record<string, unknown>> {
-  private config: DynamicConfig;
+  private dynamicConfig: DynamicConfig;
   private rules?: ScrapingRule[];
 
   constructor(
@@ -48,7 +48,7 @@ export class DynamicStrategy extends BaseStrategy<Record<string, unknown>> {
     rules?: ScrapingRule[]
   ) {
     super(scrapingConfig);
-    this.config = dynamicConfig;
+    this.dynamicConfig = dynamicConfig;
     this.rules = rules;
   }
 
@@ -56,12 +56,12 @@ export class DynamicStrategy extends BaseStrategy<Record<string, unknown>> {
     await this.preProcess(page);
 
     // Execute pre-extraction actions
-    if (this.config.actions) {
-      await this.executeActions(page, this.config.actions);
+    if (this.dynamicConfig.actions) {
+      await this.executeActions(page, this.dynamicConfig.actions);
     }
 
     // Handle infinite scroll
-    if (this.config.scrollToBottom || this.config.scrollIterations) {
+    if (this.dynamicConfig.scrollToBottom || this.dynamicConfig.scrollIterations) {
       await this.handleInfiniteScroll(page);
     }
 
@@ -81,13 +81,13 @@ export class DynamicStrategy extends BaseStrategy<Record<string, unknown>> {
     await page.waitForLoadState('networkidle');
 
     // Apply custom wait conditions
-    if (this.config.waitFor) {
-      await this.waitForConditions(page, this.config.waitFor);
+    if (this.dynamicConfig.waitFor) {
+      await this.waitForConditions(page, this.dynamicConfig.waitFor);
     }
 
     // Enable API interception if configured
-    if (this.config.interceptApi && this.config.interceptApi.length > 0) {
-      await this.setupApiInterception(page, this.config.interceptApi);
+    if (this.dynamicConfig.interceptApi && this.dynamicConfig.interceptApi.length > 0) {
+      await this.setupApiInterception(page, this.dynamicConfig.interceptApi);
     }
   }
 
@@ -136,8 +136,8 @@ export class DynamicStrategy extends BaseStrategy<Record<string, unknown>> {
    * Handle infinite scroll patterns
    */
   private async handleInfiniteScroll(page: Page): Promise<void> {
-    const iterations = this.config.scrollIterations ?? 3;
-    const delay = this.config.scrollDelay ?? 1000;
+    const iterations = this.dynamicConfig.scrollIterations ?? 3;
+    const delay = this.dynamicConfig.scrollDelay ?? 1000;
 
     let previousHeight = await page.evaluate(() => document.body.scrollHeight);
 
@@ -342,10 +342,11 @@ export class DynamicStrategy extends BaseStrategy<Record<string, unknown>> {
   async isApplicable(page: Page): Promise<boolean> {
     // Check if page uses JavaScript frameworks
     const hasFramework = await page.evaluate(() => {
+      const w = window as any;
       return !!(
-        window.React ||
-        window.Vue ||
-        window.Angular ||
+        w.React ||
+        w.Vue ||
+        w.Angular ||
         document.querySelector('[data-reactroot], [data-reactid], [data-v-app]') ||
         document.getElementById('__next') ||
         document.getElementById('app')

@@ -79,11 +79,11 @@ export class BrowserPool {
     pooledBrowser.pages.set(pageId, page);
 
     // Setup error handling
-    page.on('error', (err) => {
-      console.error(`Page error: ${err.message}`);
+    page.on('close', () => {
+      // Handle close
     });
 
-    page.on('pageerror', (err) => {
+    page.on('pageerror', (err: Error) => {
       console.error(`Page error event: ${err.message}`);
     });
 
