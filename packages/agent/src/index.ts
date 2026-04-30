@@ -81,7 +81,10 @@ export class AgentRunner extends EventEmitter {
           this.state.success = false;
         }
 
-        if (!this.state.completed) await new Promise(r => setTimeout(r, 500));
+        if (!this.state.completed) {
+          // Wait 12 seconds between steps to avoid the 5/min rate limit on Gemini free tier
+          await new Promise(r => setTimeout(r, 12000));
+        }
       }
 
       if (this.state.step >= maxSteps && !this.state.completed) {

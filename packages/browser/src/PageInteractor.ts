@@ -7,7 +7,7 @@ export class PageInteractor {
   private constructor(
     private page: Page,
     private releaseFn: () => Promise<void>,
-  ) {}
+  ) { }
 
   static async create(
     pool: BrowserPool,
@@ -79,7 +79,7 @@ export class PageInteractor {
       case 'click': {
         if (action.x == null || action.y == null) throw new Error('Click requires x,y');
         await this.page.mouse.click(action.x, action.y);
-        await this.page.waitForTimeout(500);
+        await this.page.waitForTimeout(1000);
         break;
       }
       case 'type': {
@@ -87,6 +87,8 @@ export class PageInteractor {
         await this.page.mouse.click(action.x, action.y);
         await this.page.waitForTimeout(200);
         await this.page.keyboard.type(action.text, { delay: 50 });
+        await this.page.keyboard.press('Enter');
+        await this.page.waitForTimeout(1000);
         break;
       }
       case 'scroll': {

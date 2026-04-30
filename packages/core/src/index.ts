@@ -1,4 +1,5 @@
 import type { Page } from 'playwright';
+export * from './Logger.js';
 
 // ── Agent Configuration ──────────────────────────────────────────────
 

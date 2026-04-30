@@ -31,12 +31,12 @@ ${actionHistory.length === 0 ? 'No actions taken yet.' : actionHistory.map((a, i
 4. Choose ONE action from: click, type, scroll, wait, navigate, done, fail
 
 **ACTION GUIDELINES:**
-- click: Provide the (x, y) center of the element you want to click
-- type: Provide the (x, y) center of the input field, plus the text to type. The field will be clicked first, then the text will be entered
+- click: You MUST provide the "x" and "y" center pixel coordinates of the element you want to click.
+- type: You MUST provide the "x" and "y" center pixel coordinates of the input field, plus the "text" to type. The field will be clicked first, then the text will be entered.
 - scroll: Specify direction (up/down/left/right) and amount in pixels
 - wait: Use when the page is loading or needs time to settle
 - navigate: Provide a full URL to navigate to
-- done: Use when the task is fully and successfully completed. Include a message summarizing the result
+- done: Use when the task is fully and successfully completed. Include a reason summarizing the result
 - fail: Use only when the task genuinely cannot be completed
 
 **COORDINATE RULES:**
@@ -44,6 +44,21 @@ ${actionHistory.length === 0 ? 'No actions taken yet.' : actionHistory.map((a, i
 - (0, 0) is the top-left corner
 - Estimate the CENTER of the target element, not its edge
 - Be precise — a click at the wrong coordinates will miss the target
-- If you can't complete the task after reasonable attempts, use "fail"`;
+- If you can't complete the task after reasonable attempts, use "fail"
+
+**OUTPUT FORMAT:**
+You must return a valid JSON object containing exactly two keys: "thought" (your reasoning) and "action" (the action object). Do not include any markdown formatting or conversational text outside of the JSON block.
+
+Example:
+{
+  "thought": "I need to add a todo, so I will click the input field.",
+  "action": {
+    "type": "type",
+    "x": 500,
+    "y": 300,
+    "text": "Buy groceries"
+  }
+}`;
+
   }
 }

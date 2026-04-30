@@ -28,16 +28,16 @@ export class VisionClient {
             action: {
               type: SchemaType.OBJECT,
               properties: {
-                type: { type: SchemaType.STRING },
-                x: { type: SchemaType.NUMBER },
-                y: { type: SchemaType.NUMBER },
-                text: { type: SchemaType.STRING },
+                type: { type: SchemaType.STRING, description: "The type of action to perform: click, type, scroll, wait, navigate, done, fail" },
+                x: { type: SchemaType.NUMBER, description: "The x pixel coordinate. ABSOLUTELY REQUIRED for click and type actions." },
+                y: { type: SchemaType.NUMBER, description: "The y pixel coordinate. ABSOLUTELY REQUIRED for click and type actions." },
+                text: { type: SchemaType.STRING, description: "The text to type. ABSOLUTELY REQUIRED for type action." },
                 direction: { type: SchemaType.STRING },
                 amount: { type: SchemaType.NUMBER },
                 url: { type: SchemaType.STRING },
                 reason: { type: SchemaType.STRING },
               },
-              required: ['type'],
+              required: ['type', 'x', 'y', 'text'],
             },
           },
           required: ['thought', 'action'],
@@ -93,7 +93,7 @@ export class VisionClient {
       if (jsonMatch) {
         return JSON.parse(jsonMatch[1] || jsonMatch[0]);
       }
-      throw new Error('Failed to parse AI response');
+      throw new Error('Failed to parse AI response: ' + responseText);
     }
   }
 }

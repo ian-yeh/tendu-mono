@@ -17,3 +17,4 @@ This project is built to be "Agent-First." These guidelines help AI coding assis
 ## Workflow Rules
 - Read and match existing code architecture (use code search before implementing new abstractions).
 - Run tools like standard linters before committing.
+- Do not run commands unless they're explicitly stated.
