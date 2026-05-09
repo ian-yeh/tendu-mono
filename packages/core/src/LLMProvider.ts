@@ -15,6 +15,7 @@ export interface LLMRequest {
   prompt: string;
   imageBase64?: string;
   imageMimeType?: string;
+  previousImageBase64?: string;
 }
 
 export interface LLMResponse {

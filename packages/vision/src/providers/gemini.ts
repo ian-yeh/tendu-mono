@@ -23,14 +23,14 @@ export class GeminiProvider implements LLMProvider {
   }
 
   async generate(request: LLMRequest): Promise<LLMResponse> {
+    const mime = request.imageMimeType ?? 'image/jpeg';
     const content: any[] = [request.prompt];
     if (request.imageBase64) {
-      content.push({
-        inlineData: {
-          mimeType: request.imageMimeType ?? 'image/jpeg',
-          data: request.imageBase64,
-        },
-      });
+      content.push({ inlineData: { mimeType: mime, data: request.imageBase64 } });
+    }
+    if (request.previousImageBase64) {
+      content.push('Previous screenshot (before last action — page did not visually change):');
+      content.push({ inlineData: { mimeType: mime, data: request.previousImageBase64 } });
     }
 
     const maxRetries = 3;

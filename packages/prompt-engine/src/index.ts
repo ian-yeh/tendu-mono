@@ -42,6 +42,7 @@ ${historyBlock}
 - evaluate returns raw JS. "false" means false (e.g. paused=false = video IS playing).
 - Never evaluate twice in a row. After evaluate, act on the result.
 - Call done immediately when the goal is confirmed. Do not over-step.
+- If an action did not produce the expected result, use evaluate to diagnose the current state before trying a different approach. Look for overlays, ads, dialogs, or popups that may be blocking interaction. Do not abandon a strategy without first confirming via evaluate why it failed.
 
 **THOUGHT FORMAT:**
 "LAST ACTION: ... RESULT: ... DONE IF: [condition] — [yes/no]. NEXT: ..."

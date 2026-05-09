@@ -40,17 +40,17 @@ CRITICAL RULES:
 - If stuck in a loop or unable to proceed, use action type "fail" with a reason.`;
 
   async generate(request: LLMRequest): Promise<LLMResponse> {
+    const mime = request.imageMimeType ?? 'image/jpeg';
     const content: Groq.Chat.ChatCompletionContentPart[] = [
       { type: 'text', text: request.prompt },
     ];
 
     if (request.imageBase64) {
-      content.push({
-        type: 'image_url',
-        image_url: {
-          url: `data:${request.imageMimeType ?? 'image/jpeg'};base64,${request.imageBase64}`,
-        },
-      });
+      content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${request.imageBase64}` } });
+    }
+    if (request.previousImageBase64) {
+      content.push({ type: 'text', text: 'Previous screenshot (before last action — page did not visually change):' });
+      content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${request.previousImageBase64}` } });
     }
 
     const maxRetries = 3;

@@ -17,6 +17,7 @@ export class VisionClient {
     actionHistory: string[],
     remainingSteps: number,
     warnings: string[] = [],
+    previousScreenshot?: string,
   ): Promise<VisionDecision> {
     const prompt = this.promptEngine.buildPrompt(instruction, context, actionHistory, remainingSteps, warnings);
 
@@ -24,6 +25,7 @@ export class VisionClient {
       prompt,
       imageBase64: context.screenshotBase64,
       imageMimeType: 'image/jpeg',
+      previousImageBase64: previousScreenshot,
     });
 
     return response.parsed;

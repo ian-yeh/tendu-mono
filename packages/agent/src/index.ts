@@ -16,6 +16,7 @@ export class AgentRunner extends EventEmitter {
   private repeatCount = 0;
   private lastFingerprint = '';
   private lastActionType = '';
+  private lastOffDomain = false;
 
   constructor(provider: LLMProvider) {
     super();
@@ -24,10 +25,19 @@ export class AgentRunner extends EventEmitter {
     this.state = this.resetState();
   }
 
+  private sameDomain(a: string, b: string): boolean {
+    try {
+      return new URL(a).hostname === new URL(b).hostname;
+    } catch {
+      return true;
+    }
+  }
+
   private resetState(): AgentState {
     this.repeatCount = 0;
     this.lastFingerprint = '';
     this.lastActionType = '';
+    this.lastOffDomain = false;
     return {
       page: null as any,
       currentUrl: '',
@@ -55,15 +65,15 @@ export class AgentRunner extends EventEmitter {
   }
 
   private screenshotsMatch(a: string, b: string): boolean {
-    if (!a || !b || Math.abs(a.length - b.length) > a.length * 0.02) return false;
-    const sampleSize = 200;
-    const numSamples = 10;
+    if (!a || !b || Math.abs(a.length - b.length) > a.length * 0.05) return false;
+    const sampleSize = 500;
+    const numSamples = 20;
     let matches = 0;
     for (let i = 0; i < numSamples; i++) {
       const offset = Math.floor((a.length / numSamples) * i);
       if (a.substring(offset, offset + sampleSize) === b.substring(offset, offset + sampleSize)) matches++;
     }
-    return matches >= numSamples * 0.8;
+    return matches >= numSamples * 0.6;
   }
 
   private buildWarnings(screenshotUnchanged: boolean): string[] {
@@ -76,6 +86,9 @@ export class AgentRunner extends EventEmitter {
     }
     if (screenshotUnchanged && (this.lastActionType === 'click' || this.lastActionType === 'type')) {
       warnings.push(`⚠️ SCREENSHOT UNCHANGED: Your last "${this.lastActionType}" had NO visible effect — the page looks identical. Your coordinates were WRONG or the element did not respond. Re-check DETECTED ELEMENTS for the correct center coordinates and try a different approach.`);
+    }
+    if (this.lastOffDomain) {
+      warnings.push(`⚠️ OFF-DOMAIN NAVIGATION: Your last action navigated away from the target site. The page was automatically restored. You clicked an ad or external link — avoid these. Stick to organic results on the original domain.`);
     }
     return warnings;
   }
@@ -109,6 +122,9 @@ export class AgentRunner extends EventEmitter {
           }
 
           const warnings = this.buildWarnings(screenshotUnchanged);
+          const previousScreenshot = screenshotUnchanged && shots.length >= 2
+            ? shots[shots.length - 2]
+            : undefined;
 
           console.log('[AgentRunner] actionHistory:\n' + this.state.actions.map((a, i) => `  ${i + 1}. ${a}`).join('\n'));
 
@@ -118,6 +134,7 @@ export class AgentRunner extends EventEmitter {
             this.state.actions,
             maxSteps - this.state.step,
             warnings,
+            previousScreenshot,
           );
 
           this.emit('step:decision', {
@@ -130,6 +147,10 @@ export class AgentRunner extends EventEmitter {
           const preMeta = { url: context.currentUrl, title: context.pageTitle };
           const evalResult = await interactor.executeAction(decision.action);
           const postMeta = await interactor.getPageInfo();
+          this.lastOffDomain = !!postMeta.url && !this.sameDomain(url, postMeta.url);
+          if (this.lastOffDomain) {
+            await interactor.navigateTo(preMeta.url);
+          }
           this.state.actions.push(JSON.stringify({
             step: this.state.step,
             action: decision.action,
@@ -138,6 +159,7 @@ export class AgentRunner extends EventEmitter {
             outcome: {
               urlChanged: preMeta.url !== postMeta.url,
               titleChanged: preMeta.title !== postMeta.title,
+              ...(this.lastOffDomain && { offDomain: true }),
             },
           }));
           this.trackAction(decision.action);

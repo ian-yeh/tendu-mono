@@ -2,6 +2,7 @@ import type { Page } from 'playwright';
 import { BrowserPool } from './BrowserPool.js';
 import type { Action, PageContext } from '@tendo/core';
 import type { PageInteractorOptions } from './types.js';
+import sharp from 'sharp';
 
 export class PageInteractor {
   private constructor(
@@ -43,12 +44,14 @@ export class PageInteractor {
   }
 
   async screenshot(): Promise<string> {
-    const buffer = await this.page.screenshot({
-      type: 'jpeg',
-      quality: 80,
-      fullPage: false,
-    });
-    return buffer.toString('base64');
+    const buffer = await this.page.screenshot({ fullPage: false });
+    const viewport = this.page.viewportSize();
+    const halfWidth = Math.round((viewport?.width ?? 1280) / 2);
+    const resized = await sharp(buffer)
+      .resize(halfWidth)
+      .jpeg({ quality: 75 })
+      .toBuffer();
+    return resized.toString('base64');
   }
 
   async getPageInfo(): Promise<{ title: string; url: string }> {
