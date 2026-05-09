@@ -2,6 +2,7 @@ import type { Page } from 'playwright';
 import { BrowserPool } from './BrowserPool.js';
 import type { Action, PageContext } from '@tendo/core';
 import type { PageInteractorOptions } from './types.js';
+import sharp from 'sharp';
 
 export class PageInteractor {
   private constructor(
@@ -43,12 +44,14 @@ export class PageInteractor {
   }
 
   async screenshot(): Promise<string> {
-    const buffer = await this.page.screenshot({
-      type: 'jpeg',
-      quality: 80,
-      fullPage: false,
-    });
-    return buffer.toString('base64');
+    const buffer = await this.page.screenshot({ fullPage: false });
+    const viewport = this.page.viewportSize();
+    const halfWidth = Math.round((viewport?.width ?? 1280) / 2);
+    const resized = await sharp(buffer)
+      .resize(halfWidth)
+      .jpeg({ quality: 75 })
+      .toBuffer();
+    return resized.toString('base64');
   }
 
   async getPageInfo(): Promise<{ title: string; url: string }> {
@@ -61,28 +64,45 @@ export class PageInteractor {
   async extractVisibleElements(): Promise<string[]> {
     return this.page.evaluate(() => {
       const elements: string[] = [];
-      const selectors = [
+      const seen = new Set<Element>();
+      const selectorStr = [
         'button', 'a', 'input', 'textarea',
         'select', '[role="button"]', '[role="link"]', '[role="textbox"]',
         '[role="checkbox"]', '[role="tab"]', '[role="menuitem"]',
         '[data-testid]', '[data-test]', '[class*="btn"]', '[class*="button"]',
-      ];
+      ].join(',');
 
-      const seen = new Set<Element>();
-      document.querySelectorAll(selectors.join(',')).forEach((el) => {
-        if (seen.has(el)) return;
-        seen.add(el);
+      const skipTags = new Set(['yt-interaction', 'yt-icon', 'yt-icon-button', 'yt-icon-shape', 'tp-yt-paper-ripple']);
 
-        const rect = el.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0 && rect.top < window.innerHeight) {
-          const text = el.textContent?.trim().substring(0, 50) || el.getAttribute('placeholder') || '';
-          const tag = el.tagName.toLowerCase();
-          const id = el.id ? `#${el.id}` : '';
-          const cx = Math.round(rect.x + rect.width / 2);
-          const cy = Math.round(rect.y + rect.height / 2);
-          elements.push(`[${elements.length}] ${tag}${id} "${text}" @ center=(${cx}, ${cy})`);
-        }
-      });
+      function collect(root: ParentNode): void {
+        root.querySelectorAll(selectorStr).forEach((el) => {
+          if (seen.has(el)) return;
+          seen.add(el);
+          if (skipTags.has(el.tagName.toLowerCase())) return;
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0 && rect.x >= 0 && rect.top >= 0 && rect.top < window.innerHeight) {
+            const text = (
+              el.getAttribute('aria-label') ||
+              el.textContent?.trim().substring(0, 50) ||
+              el.getAttribute('placeholder') ||
+              ''
+            );
+            const tag = el.tagName.toLowerCase();
+            const id = el.id ? `#${el.id}` : '';
+            const cx = Math.round(rect.x + rect.width / 2);
+            const cy = Math.round(rect.y + rect.height / 2);
+            elements.push(`[${elements.length}] ${tag}${id} "${text}" @ center=(${cx}, ${cy})`);
+          }
+        });
+        // Pierce shadow roots one level at a time
+        root.querySelectorAll('*').forEach((el) => {
+          if ((el as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot) {
+            collect((el as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot);
+          }
+        });
+      }
+
+      collect(document);
       return elements.slice(0, 40);
     });
   }
@@ -96,20 +116,27 @@ export class PageInteractor {
     return { screenshotBase64, pageTitle: title, currentUrl: url, visibleElements };
   }
 
-  async executeAction(action: Action): Promise<void> {
+  async executeAction(action: Action): Promise<string | undefined> {
     switch (action.type) {
       case 'click': {
         if (action.x == null || action.y == null) throw new Error('Click requires x,y');
+        if (action.x === 0 && action.y === 0) throw new Error('Click coordinates (0, 0) are invalid — likely a schema default, not a real target');
         await this.page.mouse.click(action.x, action.y);
         await this.page.waitForTimeout(1000);
         break;
       }
       case 'type': {
         if (action.x == null || action.y == null || !action.text) throw new Error('Type requires x,y and text');
+        if (action.x === 0 && action.y === 0) throw new Error('Type coordinates (0, 0) are invalid — likely a schema default, not a real target');
         await this.page.mouse.click(action.x, action.y);
         await this.page.waitForTimeout(200);
         await this.page.keyboard.type(action.text, { delay: 50 });
-        await this.page.keyboard.press('Enter');
+        await this.page.waitForTimeout(500);
+        break;
+      }
+      case 'key': {
+        if (!action.key) throw new Error('Key requires a key name');
+        await this.page.keyboard.press(action.key);
         await this.page.waitForTimeout(1000);
         break;
       }
@@ -132,6 +159,15 @@ export class PageInteractor {
         if (!action.url) throw new Error('Navigate requires URL');
         await this.page.goto(action.url, { waitUntil: 'domcontentloaded' });
         break;
+      }
+      case 'evaluate': {
+        if (!action.script) throw new Error('Evaluate requires a script');
+        try {
+          const result = await this.page.evaluate(action.script);
+          return JSON.stringify(result);
+        } catch (e) {
+          return JSON.stringify({ error: (e as Error).message });
+        }
       }
       default: break;
     }

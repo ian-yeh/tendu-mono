@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { LLMProvider, LLMProviderConfig, LLMRequest, LLMResponse, VisionDecision } from '@tendo/core';
 
 export class GeminiProvider implements LLMProvider {
@@ -18,42 +18,19 @@ export class GeminiProvider implements LLMProvider {
       generationConfig: {
         temperature: config.temperature ?? 0.2,
         responseMimeType: 'application/json',
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            thought: {
-              type: SchemaType.STRING,
-            },
-            action: {
-              type: SchemaType.OBJECT,
-              properties: {
-                type: { type: SchemaType.STRING, description: "The type of action to perform: click, type, scroll, wait, navigate, done, fail" },
-                x: { type: SchemaType.NUMBER, description: "The x pixel coordinate. ABSOLUTELY REQUIRED for click and type actions." },
-                y: { type: SchemaType.NUMBER, description: "The y pixel coordinate. ABSOLUTELY REQUIRED for click and type actions." },
-                text: { type: SchemaType.STRING, description: "The text to type. ABSOLUTELY REQUIRED for type action." },
-                direction: { type: SchemaType.STRING },
-                amount: { type: SchemaType.NUMBER },
-                url: { type: SchemaType.STRING },
-                reason: { type: SchemaType.STRING },
-              },
-              required: ['type', 'x', 'y', 'text'],
-            },
-          },
-          required: ['thought', 'action'],
-        },
       },
     });
   }
 
   async generate(request: LLMRequest): Promise<LLMResponse> {
+    const mime = request.imageMimeType ?? 'image/jpeg';
     const content: any[] = [request.prompt];
     if (request.imageBase64) {
-      content.push({
-        inlineData: {
-          mimeType: request.imageMimeType ?? 'image/jpeg',
-          data: request.imageBase64,
-        },
-      });
+      content.push({ inlineData: { mimeType: mime, data: request.imageBase64 } });
+    }
+    if (request.previousImageBase64) {
+      content.push('Previous screenshot (before last action — page did not visually change):');
+      content.push({ inlineData: { mimeType: mime, data: request.previousImageBase64 } });
     }
 
     const maxRetries = 3;

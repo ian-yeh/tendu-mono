@@ -22,7 +22,16 @@ export class GroqProvider implements LLMProvider {
 
 CRITICAL RULES:
 - You MUST return a valid JSON object with exactly two keys: "thought" (your reasoning) and "action" (the action object).
-- The "action" object MUST contain: "type" (click|type|scroll|wait|navigate|done|fail), "x" (number), "y" (number), "text" (string).
+- The "action" object MUST contain "type". Additional fields depend on the action type:
+  - click: "x" (number), "y" (number)
+  - type: "x" (number), "y" (number), "text" (string) — types text into a field, does NOT submit
+  - key: "key" (string) — presses a named key, e.g. "Enter", "Tab", "Escape". Use a separate key action after type to submit a search or advance a form.
+  - evaluate: "script" (string) — runs a JavaScript expression in the browser and returns the result. Use to verify real DOM state, e.g. 'document.querySelector("video").paused'. The result appears in ACTION HISTORY. IMPORTANT: after getting a result, your NEXT action MUST be non-evaluate — use the result to click, press a key, etc. Never evaluate twice in a row.
+  - scroll: "direction" ("up"|"down"|"left"|"right"), "amount" (pixels)
+  - navigate: "url" (string)
+  - wait: no extra fields
+  - done: "reason" (string)
+  - fail: "reason" (string)
 - For click/type actions, ALWAYS use the exact center coordinates from the DETECTED ELEMENTS list provided in the prompt.
 - ALWAYS check the ACTION HISTORY before acting. Do NOT repeat actions that have already been completed.
 - ALWAYS verify from the screenshot that your previous action actually worked. If the page looks unchanged, your action FAILED — try different coordinates or a different approach.
@@ -31,17 +40,17 @@ CRITICAL RULES:
 - If stuck in a loop or unable to proceed, use action type "fail" with a reason.`;
 
   async generate(request: LLMRequest): Promise<LLMResponse> {
+    const mime = request.imageMimeType ?? 'image/jpeg';
     const content: Groq.Chat.ChatCompletionContentPart[] = [
       { type: 'text', text: request.prompt },
     ];
 
     if (request.imageBase64) {
-      content.push({
-        type: 'image_url',
-        image_url: {
-          url: `data:${request.imageMimeType ?? 'image/jpeg'};base64,${request.imageBase64}`,
-        },
-      });
+      content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${request.imageBase64}` } });
+    }
+    if (request.previousImageBase64) {
+      content.push({ type: 'text', text: 'Previous screenshot (before last action — page did not visually change):' });
+      content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${request.previousImageBase64}` } });
     }
 
     const maxRetries = 3;
