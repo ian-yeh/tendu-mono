@@ -1,8 +1,14 @@
-# Tendo
+<p align="center">
+  <img alt="Tendo" src="https://raw.githubusercontent.com/ian-yeh/tendo/main/assets/logo.svg" width="128">
+</p>
 
-Tendo is an autonomous QA agent that tests your web app the way a person would. You describe what should happen in plain English. Tendo opens a browser, figures out how to do it, and tells you whether it worked.
+<p align="center">
+  Autonomous QA agent that tests your web app the way a person would.
+</p>
 
-No test scripts. No selectors. No maintenance.
+<p align="center">
+  No test scripts. No selectors. No maintenance.
+</p>
 
 ---
 
@@ -18,7 +24,7 @@ Most E2E testing tools require you to write and maintain brittle scripts that br
 
 ```bash
 tendo test <url> -p "<prompt>"     # Run a headless test and report result
-tendo watch <url> -p "<prompt>"    # Visible browser + screenshots saved to ./tendo-watch/
+tendo watch <url> -p "<prompt>"    # Visible browser + screenshots saved to ~/.tendo/watch/
 ```
 
 ### `tendo test`
@@ -58,4 +64,4 @@ npm run dev --workspace=apps/cli     # Run CLI in dev mode (no compile step)
 
 ---
 
-*built by Ian Yeh*
+<p align="center"><em>built by Ian Yeh</em></p>
