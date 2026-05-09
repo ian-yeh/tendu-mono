@@ -102,6 +102,12 @@ export class AgentRunner extends EventEmitter {
             this.screenshotsMatch(shots[shots.length - 1], context.screenshotBase64);
           this.state.screenshots.push(context.screenshotBase64);
 
+          if (this.state.actions.length > 0) {
+            const last = JSON.parse(this.state.actions[this.state.actions.length - 1]);
+            last.outcome = { ...last.outcome, screenshotChanged: !screenshotUnchanged };
+            this.state.actions[this.state.actions.length - 1] = JSON.stringify(last);
+          }
+
           const warnings = this.buildWarnings(screenshotUnchanged);
 
           console.log('[AgentRunner] actionHistory:\n' + this.state.actions.map((a, i) => `  ${i + 1}. ${a}`).join('\n'));
@@ -121,12 +127,18 @@ export class AgentRunner extends EventEmitter {
             screenshotBase64: context.screenshotBase64,
           });
 
+          const preMeta = { url: context.currentUrl, title: context.pageTitle };
           const evalResult = await interactor.executeAction(decision.action);
+          const postMeta = await interactor.getPageInfo();
           this.state.actions.push(JSON.stringify({
             step: this.state.step,
             action: decision.action,
             thought: decision.thought,
             ...(evalResult !== undefined && { result: evalResult }),
+            outcome: {
+              urlChanged: preMeta.url !== postMeta.url,
+              titleChanged: preMeta.title !== postMeta.title,
+            },
           }));
           this.trackAction(decision.action);
 

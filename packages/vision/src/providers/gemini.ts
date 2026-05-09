@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { LLMProvider, LLMProviderConfig, LLMRequest, LLMResponse, VisionDecision } from '@tendo/core';
 
 export class GeminiProvider implements LLMProvider {
@@ -18,31 +18,6 @@ export class GeminiProvider implements LLMProvider {
       generationConfig: {
         temperature: config.temperature ?? 0.2,
         responseMimeType: 'application/json',
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            thought: {
-              type: SchemaType.STRING,
-            },
-            action: {
-              type: SchemaType.OBJECT,
-              properties: {
-                type: { type: SchemaType.STRING, description: "The type of action to perform: click, type, scroll, wait, navigate, done, fail" },
-                x: { type: SchemaType.NUMBER, description: "The x pixel coordinate. ABSOLUTELY REQUIRED for click and type actions." },
-                y: { type: SchemaType.NUMBER, description: "The y pixel coordinate. ABSOLUTELY REQUIRED for click and type actions." },
-                text: { type: SchemaType.STRING, description: "The text to type. ABSOLUTELY REQUIRED for type action." },
-                key: { type: SchemaType.STRING, description: "For key action only: the key to press, e.g. 'Enter', 'Tab', 'Escape'. Use after type to submit a search or move between fields." },
-                script: { type: SchemaType.STRING, description: "For evaluate action only: a JavaScript expression to run in the browser and return its result. Use to verify real DOM state, e.g. 'document.querySelector(\"video\").paused' or 'document.querySelector(\"video\").currentTime'." },
-                direction: { type: SchemaType.STRING },
-                amount: { type: SchemaType.NUMBER },
-                url: { type: SchemaType.STRING },
-                reason: { type: SchemaType.STRING },
-              },
-              required: ['type'],
-            },
-          },
-          required: ['thought', 'action'],
-        },
       },
     });
   }
