@@ -84,6 +84,7 @@ export const testCommand = new Command()
         }),
         finalUrl: finalState.currentUrl,
         timestamp: new Date().toISOString(),
+        screenshots: finalState.screenshots,
       };
       const fs = await import('fs');
       fs.writeFileSync(options.output, JSON.stringify(result, null, 2));

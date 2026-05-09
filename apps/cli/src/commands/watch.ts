@@ -91,6 +91,20 @@ export const watchCommand = new Command()
       process.exit(1);
     }
 
+    const result = {
+      success: finalState.success,
+      url: targetUrl,
+      prompt: options.prompt,
+      steps: finalState.step,
+      actions: finalState.actions.flatMap((a: string) => {
+        try { return [JSON.parse(a)]; } catch { return []; }
+      }),
+      finalUrl: finalState.currentUrl,
+      timestamp: new Date().toISOString(),
+      screenshots: finalState.screenshots,
+    };
+    fs.writeFileSync(path.join(watchDir, 'result.json'), JSON.stringify(result, null, 2));
+
     p.log.message('');
     p.log.info(color.bold('Result:'));
     p.log.message(`  Status:      ${finalState.success ? color.green('PASS ✓') : color.red('FAIL ✗')}`);

@@ -77,4 +77,5 @@ export interface TestResult {
   actions: Record<string, unknown>[];
   finalUrl: string;
   timestamp: string;
+  screenshots?: string[];
 }
