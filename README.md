@@ -1,6 +1,4 @@
-<p align="center">
-  <img alt="Tendo" src="https://raw.githubusercontent.com/ian-yeh/tendo/main/assets/logo.svg" width="128">
-</p>
+<h1 align="center">Tendo</h1>
 
 <p align="center">
   Autonomous QA agent that tests your web app the way a person would.
