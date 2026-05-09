@@ -6,13 +6,16 @@ import type { RunOptions } from './types.js';
 
 export * from './types.js';
 
-const LOOP_WARN_THRESHOLD = 2;
+const LOOP_WARN_THRESHOLD = 1;
 const LOOP_FAIL_THRESHOLD = 4;
 
 export class AgentRunner extends EventEmitter {
   private pool: BrowserPool;
   private vision: VisionClient;
   private state: AgentState;
+  private repeatCount = 0;
+  private lastFingerprint = '';
+  private lastActionType = '';
 
   constructor(provider: LLMProvider) {
     super();
@@ -22,6 +25,9 @@ export class AgentRunner extends EventEmitter {
   }
 
   private resetState(): AgentState {
+    this.repeatCount = 0;
+    this.lastFingerprint = '';
+    this.lastActionType = '';
     return {
       page: null as any,
       currentUrl: '',
@@ -33,59 +39,45 @@ export class AgentRunner extends EventEmitter {
     };
   }
 
-  /** Fuzzy fingerprint — ignores coordinates, only compares type + text */
   private actionFingerprint(action: Action): string {
+    if (action.type === 'click' || action.type === 'type')
+      return `${action.type}:${action.x ?? 0},${action.y ?? 0}:${action.text ?? ''}`;
+    if (action.type === 'evaluate')
+      return `evaluate:${action.script ?? ''}`;
     return `${action.type}:${action.text ?? ''}`;
   }
 
-  /** Count how many of the last N actions share the same fuzzy fingerprint */
-  private consecutiveRepeats(): number {
-    if (this.state.actions.length < 2) return 0;
-
-    let last: { action: Action };
-    try {
-      last = JSON.parse(this.state.actions[this.state.actions.length - 1]);
-    } catch {
-      return 0;
-    }
-    const lastFp = this.actionFingerprint(last.action);
-    let count = 1;
-
-    for (let i = this.state.actions.length - 2; i >= 0; i--) {
-      let prev: { action: Action };
-      try {
-        prev = JSON.parse(this.state.actions[i]);
-      } catch {
-        break;
-      }
-      if (this.actionFingerprint(prev.action) === lastFp) {
-        count++;
-      } else {
-        break;
-      }
-    }
-
-    return count;
+  private trackAction(action: Action): void {
+    const fp = this.actionFingerprint(action);
+    this.repeatCount = fp === this.lastFingerprint ? this.repeatCount + 1 : 1;
+    this.lastFingerprint = fp;
+    this.lastActionType = action.type;
   }
 
-  /** Compare two base64 screenshot strings by sampling pixels to detect visual changes */
   private screenshotsMatch(a: string, b: string): boolean {
-    if (a.length === 0 || b.length === 0) return false;
-    // Quick heuristic: compare lengths
-    if (Math.abs(a.length - b.length) > a.length * 0.02) return false;
-    
-    // Sample slices of the base64 data
+    if (!a || !b || Math.abs(a.length - b.length) > a.length * 0.02) return false;
     const sampleSize = 200;
     const numSamples = 10;
     let matches = 0;
     for (let i = 0; i < numSamples; i++) {
       const offset = Math.floor((a.length / numSamples) * i);
-      if (a.substring(offset, offset + sampleSize) === b.substring(offset, offset + sampleSize)) {
-        matches++;
-      }
+      if (a.substring(offset, offset + sampleSize) === b.substring(offset, offset + sampleSize)) matches++;
     }
-    // If 80%+ of samples match, screenshots are effectively the same
     return matches >= numSamples * 0.8;
+  }
+
+  private buildWarnings(screenshotUnchanged: boolean): string[] {
+    const warnings: string[] = [];
+    if (this.repeatCount >= LOOP_WARN_THRESHOLD) {
+      const detail = this.lastActionType === 'evaluate'
+        ? 'You already have the evaluate result in ACTION HISTORY. Do NOT evaluate again — use the result to take a click, key, or other action right now.'
+        : `You have repeated the same action ${this.repeatCount} times. Your previous attempts may have already succeeded — check the screenshot. Move to the NEXT sub-task or use "fail" if truly stuck.`;
+      warnings.push(`⚠️ LOOP DETECTED (repeated ${this.repeatCount}x): ${detail}`);
+    }
+    if (screenshotUnchanged && (this.lastActionType === 'click' || this.lastActionType === 'type')) {
+      warnings.push(`⚠️ SCREENSHOT UNCHANGED: Your last "${this.lastActionType}" had NO visible effect — the page looks identical. Your coordinates were WRONG or the element did not respond. Re-check DETECTED ELEMENTS for the correct center coordinates and try a different approach.`);
+    }
+    return warnings;
   }
 
   async run(options: RunOptions): Promise<AgentState> {
@@ -105,55 +97,38 @@ export class AgentRunner extends EventEmitter {
 
         try {
           const context = await interactor.captureContext();
+          const shots = this.state.screenshots;
+          const screenshotUnchanged = shots.length >= 1 &&
+            this.screenshotsMatch(shots[shots.length - 1], context.screenshotBase64);
           this.state.screenshots.push(context.screenshotBase64);
 
-          let actionHistory = [...this.state.actions];
-          const repeats = this.consecutiveRepeats();
-          if (repeats >= LOOP_WARN_THRESHOLD) {
-            actionHistory.push(JSON.stringify({
-              step: 'SYSTEM',
-              action: { type: 'warning' },
-              thought: `WARNING: You have repeated the same action ${repeats} times. Look at the screenshot carefully — your previous actions may have already succeeded. Move on to the NEXT sub-task or use "fail" if the task cannot be completed.`,
-            }));
-          }
+          const warnings = this.buildWarnings(screenshotUnchanged);
 
-          // Detect if the previous action had no visual effect
-          if (this.state.screenshots.length >= 2 && this.state.actions.length > 0) {
-            const prev = this.state.screenshots[this.state.screenshots.length - 2];
-            const curr = context.screenshotBase64;
-            if (this.screenshotsMatch(prev, curr)) {
-              let lastAction: { action?: { type?: string } };
-            try {
-              lastAction = JSON.parse(this.state.actions[this.state.actions.length - 1]);
-            } catch {
-              lastAction = {};
-            }
-            const actionType = lastAction.action?.type;
-              if (actionType === 'click' || actionType === 'type') {
-                actionHistory.push(JSON.stringify({
-                  step: 'SYSTEM',
-                  action: { type: 'warning' },
-                  thought: `WARNING: The screenshot is UNCHANGED after your previous "${actionType}" action. Your action FAILED (likely wrong coordinates). Check the DETECTED ELEMENTS list for the exact center coordinates and try again.`,
-                }));
-              }
-            }
-          }
+          console.log('[AgentRunner] actionHistory:\n' + this.state.actions.map((a, i) => `  ${i + 1}. ${a}`).join('\n'));
 
           const decision = await this.vision.decideNextAction(
             prompt,
             context,
-            actionHistory,
+            this.state.actions,
             maxSteps - this.state.step,
+            warnings,
           );
 
-          this.emit('step:decision', { step: this.state.step, thought: decision.thought, action: decision.action, screenshotBase64: context.screenshotBase64 });
+          this.emit('step:decision', {
+            step: this.state.step,
+            thought: decision.thought,
+            action: decision.action,
+            screenshotBase64: context.screenshotBase64,
+          });
 
-          await interactor.executeAction(decision.action);
+          const evalResult = await interactor.executeAction(decision.action);
           this.state.actions.push(JSON.stringify({
             step: this.state.step,
             action: decision.action,
-            thought: decision.thought
+            thought: decision.thought,
+            ...(evalResult !== undefined && { result: evalResult }),
           }));
+          this.trackAction(decision.action);
 
           if (decision.action.type === 'done') {
             this.state.completed = true;
@@ -161,7 +136,7 @@ export class AgentRunner extends EventEmitter {
           } else if (decision.action.type === 'fail') {
             this.state.completed = true;
             this.state.success = false;
-          } else if (this.consecutiveRepeats() >= LOOP_FAIL_THRESHOLD) {
+          } else if (this.repeatCount >= LOOP_FAIL_THRESHOLD) {
             this.emit('error', {
               step: this.state.step,
               error: new Error(`Loop detected: same action repeated ${LOOP_FAIL_THRESHOLD} times`),
@@ -171,7 +146,6 @@ export class AgentRunner extends EventEmitter {
           }
 
           this.emit('step:end', { step: this.state.step, action: decision.action });
-
         } catch (error) {
           this.emit('error', { step: this.state.step, error });
           this.state.completed = true;
@@ -179,7 +153,6 @@ export class AgentRunner extends EventEmitter {
         }
 
         if (!this.state.completed) {
-          //await new Promise(r => setTimeout(r, 12000));
           await new Promise(r => setTimeout(r, 1000));
         }
       }

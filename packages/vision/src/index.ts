@@ -16,8 +16,9 @@ export class VisionClient {
     context: PageContext,
     actionHistory: string[],
     remainingSteps: number,
+    warnings: string[] = [],
   ): Promise<VisionDecision> {
-    const prompt = this.promptEngine.buildPrompt(instruction, context, actionHistory, remainingSteps);
+    const prompt = this.promptEngine.buildPrompt(instruction, context, actionHistory, remainingSteps, warnings);
 
     const response = await this.provider.generate({
       prompt,

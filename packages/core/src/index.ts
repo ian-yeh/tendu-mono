@@ -18,6 +18,8 @@ export interface AgentConfig {
 export type ActionType =
   | 'click'
   | 'type'
+  | 'key'
+  | 'evaluate'
   | 'scroll'
   | 'wait'
   | 'navigate'
@@ -30,6 +32,8 @@ export interface Action {
   x?: number;
   y?: number;
   text?: string;
+  key?: string;
+  script?: string;
   direction?: 'up' | 'down' | 'left' | 'right';
   amount?: number;
   url?: string;
