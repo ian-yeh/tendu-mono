@@ -146,7 +146,7 @@ export class AgentRunner extends EventEmitter {
             maxSteps - this.state.step,
           );
 
-          this.emit('step:decision', { step: this.state.step, thought: decision.thought, action: decision.action });
+          this.emit('step:decision', { step: this.state.step, thought: decision.thought, action: decision.action, screenshotBase64: context.screenshotBase64 });
 
           await interactor.executeAction(decision.action);
           this.state.actions.push(JSON.stringify({
