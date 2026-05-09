@@ -3,6 +3,9 @@ import * as p from '@clack/prompts';
 import color from 'picocolors';
 import { AgentRunner } from '@tendo/agent';
 import { createProvider } from '../agent/config.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 
 export const watchCommand = new Command()
   .name('watch')
@@ -28,6 +31,16 @@ export const watchCommand = new Command()
     const [w, h] = options.viewport.split(',').map(Number);
     const viewport = { width: w || 1920, height: h || 1080 };
 
+    const watchRoot = path.join(os.homedir(), '.tendo', 'watch');
+    fs.mkdirSync(watchRoot, { recursive: true });
+    const existingSessions = fs.readdirSync(watchRoot).filter(d => /^\d+$/.test(d));
+    const sessionNum = existingSessions.length > 0
+      ? Math.max(...existingSessions.map(Number)) + 1
+      : 1;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const watchDir = path.join(watchRoot, String(sessionNum), timestamp);
+    fs.mkdirSync(watchDir, { recursive: true });
+
     const runner = new AgentRunner(provider);
     const s = p.spinner();
 
@@ -41,8 +54,10 @@ export const watchCommand = new Command()
       s.start(`Step ${step}: Analyzing page...`);
     });
 
-    runner.on('step:decision', ({ step, thought, action }) => {
+    runner.on('step:decision', ({ step, thought, action, screenshotBase64 }) => {
       s.stop(`Step ${step}: ${color.bold(action.type.toUpperCase())}`);
+      const screenshotPath = path.join(watchDir, `step-${String(step).padStart(2, '0')}.png`);
+      fs.writeFileSync(screenshotPath, Buffer.from(screenshotBase64, 'base64'));
       p.log.info(color.dim(`  Thought: ${thought}`));
 
       if (action.x != null && action.y != null) {
@@ -78,8 +93,9 @@ export const watchCommand = new Command()
 
     p.log.message('');
     p.log.info(color.bold('Result:'));
-    p.log.message(`  Status: ${finalState.success ? color.green('PASS ✓') : color.red('FAIL ✗')}`);
-    p.log.message(`  Steps:  ${finalState.step}`);
+    p.log.message(`  Status:      ${finalState.success ? color.green('PASS ✓') : color.red('FAIL ✗')}`);
+    p.log.message(`  Steps:       ${finalState.step}`);
+    p.log.message(`  Screenshots: ${color.cyan(watchDir)}`);
 
     p.outro(finalState.success ? 'Watch completed successfully' : 'Watch completed with failure');
     process.exit(finalState.success ? 0 : 1);
