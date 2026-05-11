@@ -57,11 +57,19 @@ function openInBrowser(filePath: string): void {
   exec(cmd);
 }
 
-function defaultOutputPath(label: string): string {
+function reportDir(): string {
   const dir = path.join(os.homedir(), '.tendo', 'report');
   fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function defaultOutputPath(label: string): string {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  return path.join(dir, `${label}-${timestamp}.html`);
+  return path.join(reportDir(), `${label}-${timestamp}.html`);
+}
+
+function resolveOutputPath(file: string): string {
+  return path.isAbsolute(file) ? file : path.join(reportDir(), file);
 }
 
 export const reportCommand = new Command()
@@ -146,7 +154,7 @@ export const reportCommand = new Command()
       };
 
       const label = new URL(targetUrl).hostname.replace(/\./g, '-');
-      outputPath = options.output ? path.resolve(options.output) : defaultOutputPath(label);
+      outputPath = options.output ? resolveOutputPath(options.output) : defaultOutputPath(label);
 
     } else {
       // ── Load from file/session mode ──────────────────────────────────
@@ -170,7 +178,7 @@ export const reportCommand = new Command()
       }
 
       outputPath = options.output
-        ? path.resolve(options.output)
+        ? resolveOutputPath(options.output)
         : defaultOutputPath(path.basename(path.dirname(resultPath)));
     }
 
