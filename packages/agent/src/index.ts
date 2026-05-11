@@ -126,8 +126,6 @@ export class AgentRunner extends EventEmitter {
             ? shots[shots.length - 2]
             : undefined;
 
-          console.log('[AgentRunner] actionHistory:\n' + this.state.actions.map((a, i) => `  ${i + 1}. ${a}`).join('\n'));
-
           const decision = await this.vision.decideNextAction(
             prompt,
             context,

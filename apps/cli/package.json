@@ -24,6 +24,7 @@
     "@clack/prompts": "^1.2.0",
     "@google/generative-ai": "^0.24.1",
     "@tendo/agent": "*",
+    "@tendo/browser": "*",
     "@tendo/core": "*",
     "commander": "^14.0.3",
     "dotenv": "^16.4.5",
