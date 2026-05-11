@@ -58,8 +58,10 @@ function openInBrowser(filePath: string): void {
 }
 
 function defaultOutputPath(label: string): string {
+  const dir = path.join(os.homedir(), '.tendo', 'report');
+  fs.mkdirSync(dir, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  return path.join(process.cwd(), `tendo-report-${label}-${timestamp}.html`);
+  return path.join(dir, `${label}-${timestamp}.html`);
 }
 
 export const reportCommand = new Command()
@@ -169,7 +171,7 @@ export const reportCommand = new Command()
 
       outputPath = options.output
         ? path.resolve(options.output)
-        : resultPath.replace(/result\.json$/, 'report.html');
+        : defaultOutputPath(path.basename(path.dirname(resultPath)));
     }
 
     // ── Generate & write HTML ────────────────────────────────────────

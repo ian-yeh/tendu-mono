@@ -107,7 +107,12 @@ export function generateReport(result: TestResult): string {
     timeStyle: 'short',
   });
 
-  const stepsHtml = steps.map((s, i) => stepHtml(s, screenshots[i], i === steps.length - 1)).join('\n');
+  const stepsHtml = steps.map((s, i) => {
+    // screenshots[i+1] = page state after step i's action. Skip if unchanged.
+    const afterShot = screenshots[i + 1];
+    const changed = s.outcome?.screenshotChanged !== false;
+    return stepHtml(s, changed && afterShot ? afterShot : undefined, i === steps.length - 1);
+  }).join('\n');
   const lastScreenshot = screenshots[screenshots.length - 1];
   const passClass = result.success ? 'pass' : 'fail';
   const passLabel = result.success ? 'PASS' : 'FAIL';
