@@ -4,6 +4,7 @@ import color from 'picocolors';
 import { AgentRunner } from '@tendo/agent';
 import type { TestResult } from '@tendo/core';
 import { createProvider } from '../agent/config.js';
+import { readConfig } from './config.js';
 
 export const testCommand = new Command()
   .name('test')
@@ -11,14 +12,19 @@ export const testCommand = new Command()
   .argument('<url>', 'The URL to test')
   .requiredOption('-p, --prompt <prompt>', 'The test prompt')
   .option('--headless', 'Run browser in headless mode', true)
-  .option('--viewport <viewport>', 'Viewport size', '1920,1080')
+  .option('--viewport <viewport>', 'Viewport size (W,H)')
   .option('-o, --output <file>', 'Save result to JSON file')
   .action(async (url: string, options) => {
     p.intro(color.bgCyan(color.black(' Tendo QA Agent ')));
 
+    const cfg = readConfig();
+    if (cfg) {
+      p.log.info(color.dim(`config: provider=${cfg.provider ?? 'default'} viewport=${cfg.viewport ? `${cfg.viewport.width}×${cfg.viewport.height}` : 'default'}`));
+    }
+
     let provider;
     try {
-      provider = createProvider();
+      provider = createProvider(cfg?.provider);
     } catch (error) {
       p.log.error(color.red((error as Error).message));
       p.outro('Test aborted.');
@@ -28,8 +34,9 @@ export const testCommand = new Command()
     let targetUrl = url;
     if (!/^https?:\/\//i.test(targetUrl)) targetUrl = `https://${targetUrl}`;
 
-    const [w, h] = options.viewport.split(',').map(Number);
-    const viewport = { width: w || 1920, height: h || 1080 };
+    const viewport = options.viewport
+      ? (() => { const [w, h] = options.viewport.split(',').map(Number); return { width: w || 1920, height: h || 1080 }; })()
+      : (cfg?.viewport ?? { width: 1920, height: 1080 });
 
     const runner = new AgentRunner(provider);
     const s = p.spinner();
