@@ -21,8 +21,10 @@ Most E2E testing tools require you to write and maintain brittle scripts that br
 ## Commands
 
 ```bash
-tendo test <url> -p "<prompt>"     # Run a headless test and report result
-tendo watch <url> -p "<prompt>"    # Visible browser + screenshots saved to ~/.tendo/watch/
+tendo test <url> -p "<prompt>"           # Headless test — pass/fail result
+tendo report <url> -p "<prompt>"         # Run a test and generate an HTML report
+tendo report <url> -p "<prompt>" --watch # Visible browser + screenshots + HTML report
+tendo config                             # View and edit provider settings
 ```
 
 ### `tendo test`
@@ -33,24 +35,28 @@ The core command. Provide a starting URL and a plain English description of the 
 tendo test https://example-store.com -p "Add the first featured item to the cart and proceed to checkout"
 ```
 
-### `tendo watch`
+### `tendo report`
 
-Runs the same agent as `test` but in debug mode — the browser is visible so you can watch the agent navigate, click, and type in real-time. Each step's screenshot is saved to disk for post-run review.
+Runs a test and generates a self-contained HTML report with screenshots, step-by-step reasoning, and a pass/fail summary. Add `--watch` to run with a visible browser and save per-step screenshots to disk for debugging.
 
 ```bash
-tendo watch https://todomvc.com -p "Add three todos and mark the first one complete"
+# Run headless and open the HTML report
+tendo report https://todomvc.com -p "Add three todos and mark the first one complete"
+
+# Visible browser + per-step screenshots + HTML report
+tendo report https://todomvc.com -p "Add three todos and mark the first one complete" --watch
+
+# Generate a report from a previous session
+tendo report           # latest session
+tendo report 3         # session number
+tendo report ./result.json
 ```
 
-Screenshots are saved to `~/.tendo/watch/<session>/<timestamp>/`:
+When using `--watch`, per-step screenshots are saved to `~/.tendo/watch/<session>/<timestamp>/`.
 
-```
-~/.tendo/watch/
-  └─ 1/
-      └─ 2026-04-30T02-10-00/
-          ├─ step-01.png
-          ├─ step-02.png
-          └─ step-03.png
-```
+### `tendo config`
+
+View and edit your LLM provider configuration — API keys, model selection, and provider choice.
 
 ## Development
 

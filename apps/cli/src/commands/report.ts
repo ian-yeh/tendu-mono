@@ -10,7 +10,7 @@ import { AgentRunner } from '@tendo/agent';
 import { createProvider } from '../agent/config.js';
 import { generateReport } from '../ReportGenerator.js';
 
-const WATCH_ROOT = path.join(os.homedir(), '.tendo', 'watch');
+const SESSION_ROOT = path.join(os.homedir(), '.tendo', 'watch');
 
 function findResultJson(sessionDir: string): string | null {
   if (!fs.existsSync(sessionDir)) return null;
@@ -27,22 +27,22 @@ function findResultJson(sessionDir: string): string | null {
 
 function resolveResultPath(id?: string): string {
   if (!id) {
-    if (!fs.existsSync(WATCH_ROOT)) throw new Error('No watch sessions found — run tendo watch first');
-    const sessions = fs.readdirSync(WATCH_ROOT)
+    if (!fs.existsSync(SESSION_ROOT)) throw new Error('No sessions found — run tendo report -p first');
+    const sessions = fs.readdirSync(SESSION_ROOT)
       .filter(d => /^\d+$/.test(d))
       .sort((a, b) => Number(b) - Number(a));
     for (const session of sessions) {
-      const found = findResultJson(path.join(WATCH_ROOT, session));
+      const found = findResultJson(path.join(SESSION_ROOT, session));
       if (found) return found;
     }
-    throw new Error('No result.json found in any watch session');
+    throw new Error('No result.json found in any session');
   }
 
   if (/^\d+$/.test(id)) {
-    const sessionDir = path.join(WATCH_ROOT, id);
-    if (!fs.existsSync(sessionDir)) throw new Error(`Watch session ${id} not found at ${sessionDir}`);
+    const sessionDir = path.join(SESSION_ROOT, id);
+    if (!fs.existsSync(sessionDir)) throw new Error(`Session ${id} not found at ${sessionDir}`);
     const found = findResultJson(sessionDir);
-    if (!found) throw new Error(`No result.json in session ${id} — run tendo watch first or use tendo test -o`);
+    if (!found) throw new Error(`No result.json in session ${id}`);
     return found;
   }
 
@@ -74,9 +74,10 @@ function resolveOutputPath(file: string): string {
 
 export const reportCommand = new Command()
   .name('report')
-  .description('Generate an HTML report — from a saved result or by running a test inline')
-  .argument('[id]', 'URL (with -p), path to result.json, watch session number, or omit for latest')
-  .option('-p, --prompt <prompt>', 'Run a live test against the URL and report immediately')
+  .description('Run a test and generate an HTML report, or report from a saved result')
+  .argument('[id]', 'URL (with -p), path to result.json, session number, or omit for latest')
+  .option('-p, --prompt <prompt>', 'Run a live test against the URL')
+  .option('--watch', 'Visible browser with per-step screenshots and verbose output')
   .option('--viewport <viewport>', 'Viewport size when running live (default: 1920,1080)', '1920,1080')
   .option('-o, --output <file>', 'Output HTML file path')
   .option('--no-open', 'Do not open the report in a browser')
@@ -109,6 +110,18 @@ export const reportCommand = new Command()
       const [w, h] = options.viewport.split(',').map(Number);
       const viewport = { width: w || 1920, height: h || 1080 };
 
+      let sessionDir: string | undefined;
+      if (options.watch) {
+        fs.mkdirSync(SESSION_ROOT, { recursive: true });
+        const existingSessions = fs.readdirSync(SESSION_ROOT).filter(d => /^\d+$/.test(d));
+        const sessionNum = existingSessions.length > 0
+          ? Math.max(...existingSessions.map(Number)) + 1
+          : 1;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        sessionDir = path.join(SESSION_ROOT, String(sessionNum), timestamp);
+        fs.mkdirSync(sessionDir, { recursive: true });
+      }
+
       const runner = new AgentRunner(provider);
       const s = p.spinner();
 
@@ -122,8 +135,29 @@ export const reportCommand = new Command()
         s.start(`Step ${step}: Analyzing page...`);
       });
 
-      runner.on('step:decision', ({ step, action }: { step: number; thought: string; action: { type: string } }) => {
+      runner.on('step:decision', ({ step, thought, action, screenshotBase64 }: {
+        step: number;
+        thought: string;
+        action: { type: string; x?: number; y?: number; text?: string; reason?: string };
+        screenshotBase64: string;
+      }) => {
         s.stop(`Step ${step}: ${color.bold(action.type.toUpperCase())}`);
+
+        if (sessionDir) {
+          const screenshotPath = path.join(sessionDir, `step-${String(step).padStart(2, '0')}.png`);
+          fs.writeFileSync(screenshotPath, Buffer.from(screenshotBase64, 'base64'));
+          p.log.info(color.dim(`  Thought: ${thought}`));
+          if (action.x != null && action.y != null) {
+            p.log.info(color.dim(`  Coords:  (${action.x}, ${action.y})`));
+          }
+          if (action.text) {
+            p.log.info(color.dim(`  Text:    "${action.text}"`));
+          }
+          if (action.reason) {
+            p.log.info(color.dim(`  Reason:  ${action.reason}`));
+          }
+          p.log.message('');
+        }
       });
 
       runner.on('error', ({ step, error }: { step: number; error: Error }) => {
@@ -133,7 +167,12 @@ export const reportCommand = new Command()
 
       let finalState;
       try {
-        finalState = await runner.run({ url: targetUrl, prompt: options.prompt, headless: true, viewport });
+        finalState = await runner.run({
+          url: targetUrl,
+          prompt: options.prompt,
+          headless: !options.watch,
+          viewport,
+        });
       } catch (error) {
         p.log.error(color.red(`Fatal error: ${(error as Error).message}`));
         p.outro(color.red('Report generation failed'));
@@ -152,6 +191,11 @@ export const reportCommand = new Command()
         timestamp: new Date().toISOString(),
         screenshots: finalState.screenshots,
       };
+
+      if (sessionDir) {
+        fs.writeFileSync(path.join(sessionDir, 'result.json'), JSON.stringify(result, null, 2));
+        p.log.info(`${color.dim('Screenshots:')} ${color.cyan(sessionDir)}`);
+      }
 
       const label = new URL(targetUrl).hostname.replace(/\./g, '-');
       outputPath = options.output ? resolveOutputPath(options.output) : defaultOutputPath(label);

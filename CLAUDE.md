@@ -19,8 +19,10 @@ npm run build --workspace=apps/cli
 npm run dev --workspace=apps/cli
 
 # Run built CLI
-tendo test <url> -p "<prompt>"
-tendo watch <url> -p "<prompt>"    # visible browser + screenshots saved to ./tendo-watch/
+tendo test <url> -p "<prompt>"                  # headless test
+tendo report <url> -p "<prompt>"                # run test + generate HTML report
+tendo report <url> -p "<prompt>" --watch        # visible browser + screenshots + HTML report
+tendo config                                    # view/edit provider settings
 ```
 
 No test runner is configured — tests do not exist yet.
@@ -41,7 +43,7 @@ npm workspaces: `apps/*` and `packages/*`. All packages are ESM TypeScript targe
 - `packages/agent` — `AgentRunner`: event-driven loop (max 30 steps), loop detection via fuzzy action fingerprinting + screenshot pixel sampling
 - `packages/vision` — `VisionClient`: orchestrates `PromptEngine` + `LLMProvider` to produce `VisionDecision` (thought + action)
 - `packages/prompt-engine` — constructs structured prompts from screenshot, detected elements, and action history
-- `apps/cli` — Commander CLI, provider factory (`src/agent/config.ts`), five commands (`test`, `watch`, and three stubs)
+- `apps/cli` — Commander CLI, provider factory (`src/agent/config.ts`), three commands: `test`, `report` (live run + HTML generation, `--watch` for visible browser), `config`
 
 ## Agent Loop
 
