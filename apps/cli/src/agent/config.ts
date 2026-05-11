@@ -31,8 +31,8 @@ function getProviderConfig(provider: ProviderName): LLMProviderConfig {
   }
 }
 
-export function createProvider(): LLMProvider {
-  const name = (process.env.LLM_PROVIDER || 'gemini') as ProviderName;
+export function createProvider(providerOverride?: string): LLMProvider {
+  const name = (process.env.LLM_PROVIDER || providerOverride || 'gemini') as ProviderName;
 
   if (!PROVIDER_DEFAULTS[name]) {
     throw new Error(`Unknown LLM provider: "${name}". Supported: ${Object.keys(PROVIDER_DEFAULTS).join(', ')}`);

@@ -9,6 +9,7 @@ import type { TestResult } from '@tendo/core';
 import { AgentRunner } from '@tendo/agent';
 import { createProvider } from '../agent/config.js';
 import { generateReport } from '../ReportGenerator.js';
+import { readConfig } from './config.js';
 
 const SESSION_ROOT = path.join(os.homedir(), '.tendo', 'watch');
 
@@ -78,11 +79,16 @@ export const reportCommand = new Command()
   .argument('[id]', 'URL (with -p), path to result.json, session number, or omit for latest')
   .option('-p, --prompt <prompt>', 'Run a live test against the URL')
   .option('--watch', 'Visible browser with per-step screenshots and verbose output')
-  .option('--viewport <viewport>', 'Viewport size when running live (default: 1920,1080)', '1920,1080')
+  .option('--viewport <viewport>', 'Viewport size when running live (W,H)')
   .option('-o, --output <file>', 'Output HTML file path')
   .option('--no-open', 'Do not open the report in a browser')
   .action(async (id: string | undefined, options) => {
     p.intro(color.bgCyan(color.black(' Tendo Report ')));
+
+    const cfg = readConfig();
+    if (cfg) {
+      p.log.info(color.dim(`config: provider=${cfg.provider ?? 'default'} viewport=${cfg.viewport ? `${cfg.viewport.width}×${cfg.viewport.height}` : 'default'}`));
+    }
 
     let result: TestResult;
     let outputPath: string;
@@ -100,15 +106,16 @@ export const reportCommand = new Command()
 
       let provider;
       try {
-        provider = createProvider();
+        provider = createProvider(cfg?.provider);
       } catch (error) {
         p.log.error((error as Error).message);
         p.outro(color.red('Report generation failed'));
         process.exit(1);
       }
 
-      const [w, h] = options.viewport.split(',').map(Number);
-      const viewport = { width: w || 1920, height: h || 1080 };
+      const viewport = options.viewport
+        ? (() => { const [w, h] = options.viewport.split(',').map(Number); return { width: w || 1920, height: h || 1080 }; })()
+        : (cfg?.viewport ?? { width: 1920, height: 1080 });
 
       let sessionDir: string | undefined;
       if (options.watch) {
