@@ -70,8 +70,8 @@ export class AgentRunner extends EventEmitter {
     if (!a || !b) return false;
     try {
       const [imgA, imgB] = await Promise.all([
-        sharp(Buffer.from(a, 'base64')).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
-        sharp(Buffer.from(b, 'base64')).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+        sharp(Buffer.from(a, 'base64')).resize(200).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+        sharp(Buffer.from(b, 'base64')).resize(200).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
       ]);
 
       const { width, height } = imgA.info;
