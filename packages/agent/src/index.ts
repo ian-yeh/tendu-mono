@@ -52,11 +52,18 @@ export class AgentRunner extends EventEmitter {
   }
 
   private actionFingerprint(action: Action): string {
-    if (action.type === 'click' || action.type === 'type')
-      return `${action.type}:${action.x ?? 0},${action.y ?? 0}:${action.text ?? ''}`;
-    if (action.type === 'evaluate')
-      return `evaluate:${action.script ?? ''}`;
-    return `${action.type}:${action.text ?? ''}`;
+    switch (action.type) {
+      case 'click':
+        return `click:${action.x},${action.y}`;
+      case 'type':
+        return `type:${action.x},${action.y}:${action.text}`;
+      case 'evaluate':
+        return `evaluate:${action.script}`;
+      case 'scroll':
+        return `scroll:${action.direction ?? 'down'}:${action.amount ?? 500}`;
+      default:
+        return `${action.type}`;
+    }
   }
 
   private trackAction(action: Action): void {

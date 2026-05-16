@@ -27,19 +27,17 @@ export type ActionType =
   | 'done'
   | 'fail';
 
-export interface Action {
-  type: ActionType;
-  x?: number;
-  y?: number;
-  text?: string;
-  key?: string;
-  script?: string;
-  direction?: 'up' | 'down' | 'left' | 'right';
-  amount?: number;
-  url?: string;
-  reason?: string;
-  message?: string;
-}
+export type Action =
+  | { type: 'click'; x: number; y: number; reason?: string }
+  | { type: 'type'; x: number; y: number; text: string; reason?: string }
+  | { type: 'key'; key: string; reason?: string }
+  | { type: 'evaluate'; script: string; reason?: string }
+  | { type: 'scroll'; direction?: 'up' | 'down' | 'left' | 'right'; amount?: number; reason?: string }
+  | { type: 'wait'; amount?: number; reason?: string }
+  | { type: 'navigate'; url: string; reason?: string }
+  | { type: 'screenshot'; reason?: string }
+  | { type: 'done'; reason?: string }
+  | { type: 'fail'; message: string };
 
 // ── Agent State ──────────────────────────────────────────────────────
 
