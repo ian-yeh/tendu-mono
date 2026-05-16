@@ -1,5 +1,7 @@
 import { EventEmitter } from 'events';
 import type { AgentState, LLMProvider, Action } from '@tendo/core';
+import pixelmatch from 'pixelmatch';
+import sharp from 'sharp';
 import { BrowserPool, PageInteractor } from '@tendo/browser';
 import { VisionClient } from '@tendo/vision';
 import type { RunOptions } from './types.js';
@@ -64,16 +66,22 @@ export class AgentRunner extends EventEmitter {
     this.lastActionType = action.type;
   }
 
-  private screenshotsMatch(a: string, b: string): boolean {
-    if (!a || !b || Math.abs(a.length - b.length) > a.length * 0.05) return false;
-    const sampleSize = 500;
-    const numSamples = 20;
-    let matches = 0;
-    for (let i = 0; i < numSamples; i++) {
-      const offset = Math.floor((a.length / numSamples) * i);
-      if (a.substring(offset, offset + sampleSize) === b.substring(offset, offset + sampleSize)) matches++;
+  private async screenshotsMatch(a: string, b: string): Promise<boolean> {
+    if (!a || !b) return false;
+    try {
+      const [imgA, imgB] = await Promise.all([
+        sharp(Buffer.from(a, 'base64')).resize(200).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+        sharp(Buffer.from(b, 'base64')).resize(200).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+      ]);
+
+      const { width, height } = imgA.info;
+      if (width !== imgB.info.width || height !== imgB.info.height) return false;
+
+      const diff = pixelmatch(imgA.data, imgB.data, null, width, height, { threshold: 0.1 });
+      return diff / (width * height) < 0.05;
+    } catch {
+      return false;
     }
-    return matches >= numSamples * 0.6;
   }
 
   private buildWarnings(screenshotUnchanged: boolean): string[] {
@@ -112,7 +120,7 @@ export class AgentRunner extends EventEmitter {
           const context = await interactor.captureContext();
           const shots = this.state.screenshots;
           const screenshotUnchanged = shots.length >= 1 &&
-            this.screenshotsMatch(shots[shots.length - 1], context.screenshotBase64);
+            await this.screenshotsMatch(shots[shots.length - 1], context.screenshotBase64);
           this.state.screenshots.push(context.screenshotBase64);
 
           if (this.state.actions.length > 0) {
