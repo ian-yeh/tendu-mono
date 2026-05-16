@@ -3,12 +3,10 @@
 import 'dotenv/config';
 
 import { Command } from 'commander';
-import * as p from '@clack/prompts';
-import color from 'picocolors';
 
-import { testCommand } from './commands/test.js';
-import { reportCommand } from './commands/report.js';
-import { configCommand } from './commands/config.js';
+import { testCommand } from './commands/test/index.js';
+import { reportCommand } from './commands/report/index.js';
+import { configCommand } from './commands/config/index.js';
 
 const program = new Command();
 
