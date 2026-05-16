@@ -5,10 +5,10 @@ import path from 'node:path';
 import os from 'node:os';
 import { exec } from 'node:child_process';
 import type { TestResult } from '@tendo/core';
-import { AgentRunner } from '@tendo/agent';
 import { createProvider } from '../../agent/config.js';
 import { generateReport } from '../../ReportGenerator.js';
 import { readConfig } from '../config/config.js';
+import { runAgentWithUI } from '../shared.js';
 
 const SESSION_ROOT = path.join(os.homedir(), '.tendo', 'watch');
 
@@ -99,9 +99,6 @@ export async function runReport(id: string | undefined, options: ReportOptions):
       process.exit(1);
     }
 
-    let targetUrl = id;
-    if (!/^https?:\/\//i.test(targetUrl)) targetUrl = `https://${targetUrl}`;
-
     let provider;
     try {
       provider = createProvider(cfg?.provider);
@@ -115,68 +112,15 @@ export async function runReport(id: string | undefined, options: ReportOptions):
       ? (() => { const [w, h] = options.viewport!.split(',').map(Number); return { width: w || 1920, height: h || 1080 }; })()
       : (cfg?.viewport ?? { width: 1920, height: 1080 });
 
-    let sessionDir: string | undefined;
-    if (options.watch) {
-      fs.mkdirSync(SESSION_ROOT, { recursive: true });
-      const existingSessions = fs.readdirSync(SESSION_ROOT).filter(d => /^\d+$/.test(d));
-      const sessionNum = existingSessions.length > 0
-        ? Math.max(...existingSessions.map(Number)) + 1
-        : 1;
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      sessionDir = path.join(SESSION_ROOT, String(sessionNum), timestamp);
-      fs.mkdirSync(sessionDir, { recursive: true });
-    }
-
-    const runner = new AgentRunner(provider);
-    const s = p.spinner();
-
-    runner.on('init', () => {
-      p.log.info(`${color.dim('URL:')}    ${color.cyan(targetUrl)}`);
-      p.log.info(`${color.dim('Prompt:')} ${color.yellow(options.prompt)}`);
-      p.log.message('');
-    });
-
-    runner.on('step:start', ({ step }: { step: number }) => {
-      s.start(`Step ${step}: Analyzing page...`);
-    });
-
-    runner.on('step:decision', ({ step, thought, action, screenshotBase64 }: {
-      step: number;
-      thought: string;
-      action: { type: string; x?: number; y?: number; text?: string; reason?: string };
-      screenshotBase64: string;
-    }) => {
-      s.stop(`Step ${step}: ${color.bold(action.type.toUpperCase())}`);
-
-      if (sessionDir) {
-        const screenshotPath = path.join(sessionDir, `step-${String(step).padStart(2, '0')}.png`);
-        fs.writeFileSync(screenshotPath, Buffer.from(screenshotBase64, 'base64'));
-        p.log.info(color.dim(`  Thought: ${thought}`));
-        if (action.x != null && action.y != null) {
-          p.log.info(color.dim(`  Coords:  (${action.x}, ${action.y})`));
-        }
-        if (action.text) {
-          p.log.info(color.dim(`  Text:    "${action.text}"`));
-        }
-        if (action.reason) {
-          p.log.info(color.dim(`  Reason:  ${action.reason}`));
-        }
-        p.log.message('');
-      }
-    });
-
-    runner.on('error', ({ step, error }: { step: number; error: Error }) => {
-      s.stop(`Step ${step} failed`);
-      p.log.error(color.red(`  Error: ${error.message}`));
-    });
-
-    let finalState;
+    let agentResult;
     try {
-      finalState = await runner.run({
-        url: targetUrl,
+      agentResult = await runAgentWithUI({
+        url: id,
         prompt: options.prompt,
-        headless: !options.watch,
+        provider,
         viewport,
+        headless: !options.watch,
+        watch: options.watch,
       });
     } catch (error) {
       p.log.error(color.red(`Fatal error: ${(error as Error).message}`));
@@ -184,25 +128,8 @@ export async function runReport(id: string | undefined, options: ReportOptions):
       process.exit(1);
     }
 
-    result = {
-      success: finalState.success,
-      url: targetUrl,
-      prompt: options.prompt,
-      steps: finalState.step,
-      actions: finalState.actions.flatMap((a: string) => {
-        try { return [JSON.parse(a)]; } catch { return []; }
-      }),
-      finalUrl: finalState.currentUrl,
-      timestamp: new Date().toISOString(),
-      screenshots: finalState.screenshots,
-    };
-
-    if (sessionDir) {
-      fs.writeFileSync(path.join(sessionDir, 'result.json'), JSON.stringify(result, null, 2));
-      p.log.info(`${color.dim('Screenshots:')} ${color.cyan(sessionDir)}`);
-    }
-
-    const label = new URL(targetUrl).hostname.replace(/\./g, '-');
+    result = agentResult.result;
+    const label = new URL(result.url).hostname.replace(/\./g, '-');
     outputPath = options.output ? resolveOutputPath(options.output) : defaultOutputPath(label);
 
   } else {
