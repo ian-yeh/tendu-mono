@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { AgentRunner } from '@tendo/agent';
-import type { TestResult } from '@tendo/core';
+import type { TestResult, Action } from '@tendo/core';
 import type { LLMProvider } from '@tendo/core';
 
 const SESSION_ROOT = path.join(os.homedir(), '.tendo', 'watch');
@@ -53,7 +53,7 @@ export async function runAgentWithUI(options: AgentRunOptions): Promise<{
   runner.on('step:decision', ({ step, thought, action, screenshotBase64 }: {
     step: number;
     thought: string;
-    action: { type: string; x?: number; y?: number; text?: string; reason?: string };
+    action: Action;
     screenshotBase64: string;
   }) => {
     s.stop(`Step ${step}: ${color.bold(action.type.toUpperCase())}`);
@@ -62,19 +62,19 @@ export async function runAgentWithUI(options: AgentRunOptions): Promise<{
       const screenshotPath = path.join(sessionDir, `step-${String(step).padStart(2, '0')}.png`);
       fs.writeFileSync(screenshotPath, Buffer.from(screenshotBase64, 'base64'));
       p.log.info(color.dim(`  Thought: ${thought}`));
-      if (action.x != null && action.y != null) {
+      if (action.type === 'click' || action.type === 'type') {
         p.log.info(color.dim(`  Coords:  (${action.x}, ${action.y})`));
       }
-      if (action.text) {
+      if (action.type === 'type') {
         p.log.info(color.dim(`  Text:    "${action.text}"`));
       }
-      if (action.reason) {
+      if ('reason' in action && action.reason) {
         p.log.info(color.dim(`  Reason:  ${action.reason}`));
       }
       p.log.message('');
     } else {
       p.log.info(color.dim(`Thought: ${thought}`));
-      if (action.reason) p.log.info(color.dim(`Reason: ${action.reason}`));
+      if ('reason' in action && action.reason) p.log.info(color.dim(`Reason: ${action.reason}`));
     }
   });
 

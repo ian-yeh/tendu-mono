@@ -119,14 +119,12 @@ export class PageInteractor {
   async executeAction(action: Action): Promise<string | undefined> {
     switch (action.type) {
       case 'click': {
-        if (action.x == null || action.y == null) throw new Error('Click requires x,y');
         if (action.x === 0 && action.y === 0) throw new Error('Click coordinates (0, 0) are invalid — likely a schema default, not a real target');
         await this.page.mouse.click(action.x, action.y);
         await this.page.waitForTimeout(1000);
         break;
       }
       case 'type': {
-        if (action.x == null || action.y == null || !action.text) throw new Error('Type requires x,y and text');
         if (action.x === 0 && action.y === 0) throw new Error('Type coordinates (0, 0) are invalid — likely a schema default, not a real target');
         await this.page.mouse.click(action.x, action.y);
         await this.page.waitForTimeout(200);
@@ -134,12 +132,10 @@ export class PageInteractor {
         await this.page.waitForTimeout(500);
         break;
       }
-      case 'key': {
-        if (!action.key) throw new Error('Key requires a key name');
+      case 'key':
         await this.page.keyboard.press(action.key);
         await this.page.waitForTimeout(1000);
         break;
-      }
       case 'scroll': {
         const direction = action.direction || 'down';
         const amount = action.amount || 500;
@@ -151,17 +147,13 @@ export class PageInteractor {
         }, { dir: direction, amt: amount });
         break;
       }
-      case 'wait': {
+      case 'wait':
         await this.page.waitForTimeout(action.amount || 1000);
         break;
-      }
-      case 'navigate': {
-        if (!action.url) throw new Error('Navigate requires URL');
+      case 'navigate':
         await this.page.goto(action.url, { waitUntil: 'domcontentloaded' });
         break;
-      }
       case 'evaluate': {
-        if (!action.script) throw new Error('Evaluate requires a script');
         try {
           const result = await this.page.evaluate(action.script);
           return JSON.stringify(result);

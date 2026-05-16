@@ -38,11 +38,11 @@ function formatAction(action: StepRecord['action']): string {
     case 'type':     return `type "${action.text}" @ (${action.x}, ${action.y})`;
     case 'key':      return `key "${action.key}"`;
     case 'navigate': return `navigate → ${action.url}`;
-    case 'scroll':   return `scroll ${action.direction} ${action.amount}px`;
+    case 'scroll':   return `scroll ${action.direction || 'down'} ${action.amount || 500}px`;
     case 'wait':     return `wait ${action.amount ?? 1000}ms`;
     case 'evaluate': return `evaluate JS`;
-    case 'done':     return `done — ${action.reason}`;
-    case 'fail':     return `fail — ${action.message ?? action.reason}`;
+    case 'done':     return `done — ${action.reason ?? ''}`;
+    case 'fail':     return `fail — ${action.message}`;
     default:         return action.type;
   }
 }
