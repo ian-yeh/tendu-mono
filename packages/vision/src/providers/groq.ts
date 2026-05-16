@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import type { LLMProvider, LLMProviderConfig, LLMRequest, LLMResponse, VisionDecision } from '@tendo/core';
+import { validateVisionDecision } from '../validate.js';
 
 export class GroqProvider implements LLMProvider {
   readonly name = 'groq';
@@ -85,13 +86,13 @@ CRITICAL RULES:
 
   private parseResponse(responseText: string): VisionDecision {
     try {
-      return JSON.parse(responseText);
+      return validateVisionDecision(JSON.parse(responseText));
     } catch {
       const jsonMatch =
         responseText.match(/```json\n?([\s\S]*?)\n?```/) ||
         responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        return validateVisionDecision(JSON.parse(jsonMatch[1] || jsonMatch[0]));
       }
       throw new Error('Failed to parse AI response: ' + responseText);
     }

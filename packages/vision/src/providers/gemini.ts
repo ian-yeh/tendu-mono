@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { LLMProvider, LLMProviderConfig, LLMRequest, LLMResponse, VisionDecision } from '@tendo/core';
+import { validateVisionDecision } from '../validate.js';
 
 export class GeminiProvider implements LLMProvider {
   readonly name = 'gemini';
@@ -38,7 +39,9 @@ export class GeminiProvider implements LLMProvider {
       try {
         const result = await this.model.generateContent(content);
         const raw = result.response.text();
-        return { raw, parsed: this.parseResponse(raw) };
+        const parsed = this.parseResponse(raw);
+
+        return { raw, parsed: parsed };
       } catch (error) {
         const message = (error as Error).message || '';
         const isRetryable = message.includes('503') || message.includes('429') || message.includes('overloaded');
@@ -56,13 +59,13 @@ export class GeminiProvider implements LLMProvider {
 
   private parseResponse(responseText: string): VisionDecision {
     try {
-      return JSON.parse(responseText);
+      return validateVisionDecision(JSON.parse(responseText));
     } catch {
       const jsonMatch =
         responseText.match(/```json\n?([\s\S]*?)\n?```/) ||
         responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        return validateVisionDecision(JSON.parse(jsonMatch[1] || jsonMatch[0]));
       }
       throw new Error('Failed to parse AI response: ' + responseText);
     }
